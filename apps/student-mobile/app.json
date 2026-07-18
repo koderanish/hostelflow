@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "HostelFlow Student",
+    "slug": "hostelflow-student-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#faf8ff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true },
+    "android": {
+      "adaptiveIcon": { "backgroundColor": "#faf8ff" }
+    }
+  }
+}
