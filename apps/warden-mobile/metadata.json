@@ -1,0 +1,6 @@
+{
+  "name": "HostelFlow",
+  "description": "A comprehensive Hostel Warden Command Center featuring real-time daily overviews, attendance trackers, complaint management panels, and visitor logs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
