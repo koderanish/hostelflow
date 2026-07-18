@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "ios": { "supportsTablet": true },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.hostelflow.warden" },
     "android": { "package": "com.hostelflow.warden" }
   }
 }

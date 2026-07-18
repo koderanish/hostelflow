@@ -1,7 +1,7 @@
 {
   "name": "hostelflow-warden",
   "version": "1.0.0",
-  "main": "App.tsx",
+  "main": "App.js",
   "dependencies": {
     "expo": "~52.0.0",
     "expo-status-bar": "~52.0.0",
