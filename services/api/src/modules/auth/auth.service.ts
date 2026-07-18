@@ -183,6 +183,28 @@ export const resetPassword = async (token: string, newPassword: string) => {
   return { message: 'Password reset successfully' };
 };
 
+export const updateProfile = async (userId: string, data: { name?: string; email?: string; phone?: string }) => {
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { role: true } });
+  if (!user) throw new ApiError(404, 'User not found');
+
+  if (data.email && data.email !== user.email) {
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) throw new ApiError(409, 'Email already in use');
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(data.name && { fullName: data.name }),
+      ...(data.email && { email: data.email }),
+      ...(data.phone !== undefined && { phone: data.phone }),
+    },
+    include: { role: true },
+  });
+
+  return mapUser(updated);
+};
+
 export const changePassword = async (userId: string, oldPassword: string, newPassword: string) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new ApiError(404, 'User not found');

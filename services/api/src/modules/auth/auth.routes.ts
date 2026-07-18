@@ -25,6 +25,7 @@ router.post('/verify-otp', validate(verifyOtpSchema), controller.verifyOtp);
 router.post('/reset-password', validate(resetPasswordSchema), controller.resetPassword);
 
 router.get('/profile', authenticate, controller.getProfile);
+router.put('/profile', authenticate, controller.updateProfile);
 router.post('/change-password', authenticate, validate(changePasswordSchema), controller.changePassword);
 
 export default router;
