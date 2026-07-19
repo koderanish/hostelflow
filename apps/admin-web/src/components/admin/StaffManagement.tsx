@@ -7,7 +7,7 @@ import type { Staff } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useNotify } from '../../context/NotificationContext';
-import { UserCog, Search, Plus, Mail, Phone, Loader2, Edit3, Trash2 } from 'lucide-react';
+import { UserCog, Search, Plus, Mail, Phone, Loader2, Edit3, Trash2, Key, Copy, Check } from 'lucide-react';
 
 const staffSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -30,6 +30,10 @@ export default function StaffManagement() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Staff | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [resetTarget, setResetTarget] = useState<Staff | null>(null);
+  const [resetResult, setResetResult] = useState<{ loginId: string; name: string; generatedPassword: string } | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<StaffFormData>({
     resolver: zodResolver(staffSchema),
@@ -77,6 +81,27 @@ export default function StaffManagement() {
       addToast(res.error || 'Failed to save staff', 'error');
     }
     setSubmitting(false);
+  };
+
+  const handleReset = async () => {
+    if (!resetTarget) return;
+    setResetting(true);
+    setResetResult(null);
+    const res = await staffService.resetPassword(resetTarget.id);
+    if (res.success && res.data) {
+      setResetResult(res.data);
+    } else {
+      addToast(res.error || 'Reset failed', 'error');
+    }
+    setResetting(false);
+  };
+
+  const copyPassword = () => {
+    if (resetResult?.generatedPassword) {
+      navigator.clipboard.writeText(resetResult.generatedPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleDelete = async () => {
@@ -145,6 +170,9 @@ export default function StaffManagement() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">{s.role}</p>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => setResetTarget(s)} className="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Reset Password">
+                        <Key className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={() => startEdit(s)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
@@ -231,6 +259,45 @@ export default function StaffManagement() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!resetTarget} onClose={() => { setResetTarget(null); setResetResult(null); setCopied(false); }} title="Reset Password" size="md">
+        {!resetResult ? (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">Reset password for <strong>{resetTarget?.name}</strong>?</p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button onClick={() => { setResetTarget(null); setResetResult(null); }}
+                className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+              <button onClick={handleReset} disabled={resetting}
+                className="px-6 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+                {resetting && <Loader2 className="w-4 h-4 animate-spin" />}
+                Reset Password
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-3">New password generated</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between py-1.5 border-b border-amber-200/50 dark:border-amber-800/50">
+                  <span className="text-xs text-slate-500">Login ID</span>
+                  <span className="text-sm font-medium text-slate-900 dark:text-white">{resetResult.loginId}</span>
+                </div>
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-xs text-slate-500">Password</span>
+                  <span className="text-sm font-mono font-bold text-slate-900 dark:text-white">{resetResult.generatedPassword}</span>
+                </div>
+              </div>
+            </div>
+            <button onClick={copyPassword}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              {copied ? <><Check className="w-4 h-4 text-emerald-500" /> Copied</> : <><Copy className="w-4 h-4" /> Copy Password</>}
+            </button>
+            <button onClick={() => { setResetTarget(null); setResetResult(null); setCopied(false); }}
+              className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-accent-600 text-white text-sm font-medium">Done</button>
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}

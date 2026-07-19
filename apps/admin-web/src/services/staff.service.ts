@@ -90,6 +90,14 @@ class StaffService extends BaseService<Staff> {
   async delete(id: string): Promise<ApiResponse<void>> {
     return super.delete(id);
   }
+
+  async resetPassword(id: string): Promise<ApiResponse<{ loginId: string; name: string; generatedPassword: string }>> {
+    const res = await api.patch<any>(`/users/${id}/reset-password`);
+    if (res.success && res.data) {
+      return { success: true, data: res.data?.data || res.data };
+    }
+    return { success: false, error: res.error || 'Reset failed' };
+  }
 }
 
 export const staffService = new StaffService();
