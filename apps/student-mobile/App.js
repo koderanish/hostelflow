@@ -27,6 +27,8 @@ import Notifications from "./src/screens/Notifications";
 import Settings from "./src/screens/Settings";
 import VisitorRequest from "./src/screens/VisitorRequest";
 
+import { authStore } from "./src/services/authStore";
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -50,11 +52,13 @@ function MainTabs() {
 }
 
 export default function App() {
+  const initialRoute = authStore.isAuthenticated() ? "MainTabs" : "Login";
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Register" component={Register} />
           <Stack.Screen name="ForgotPassword" component={ForgotPassword} />

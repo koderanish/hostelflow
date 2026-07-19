@@ -1,8 +1,6 @@
 import axios from "axios";
 
-// Point this at Member 1's backend once it's deployed / running locally.
-// For local dev on a physical phone, use your laptop's LAN IP, not "localhost".
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:5000/api";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://hostelflow-xgt1.vercel.app/api/v1";
 
 export const api = axios.create({
   baseURL: BASE_URL,

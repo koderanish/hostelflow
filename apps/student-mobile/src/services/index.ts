@@ -1,0 +1,20 @@
+export { authService } from './auth.service';
+export { studentService } from './student.service';
+export { leaveService } from './leave.service';
+export { complaintService } from './complaint.service';
+export { applicationService } from './application.service';
+export { paymentService } from './payment.service';
+export { roomService } from './room.service';
+export { notificationService } from './notification.service';
+export { dashboardService } from './dashboard.service';
+
+export type { ApiResponse, PaginationInfo } from './types';
+export type { LoginData, RegisterPayload } from './auth.service';
+export type { StudentProfile } from './student.service';
+export type { LeaveRequest, ApplyLeavePayload } from './leave.service';
+export type { Complaint, CreateComplaintPayload } from './complaint.service';
+export type { HostelApplication, CreateApplicationPayload } from './application.service';
+export type { Payment, Invoice, PaymentHistoryEntry } from './payment.service';
+export type { RoomInfo } from './room.service';
+export type { Notification } from './notification.service';
+export type { DashboardData } from './dashboard.service';
