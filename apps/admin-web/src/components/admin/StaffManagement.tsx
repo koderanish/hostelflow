@@ -67,7 +67,11 @@ export default function StaffManagement() {
       res = await staffService.create(data as any);
     }
     if (res.success) {
-      addToast(editingId ? 'Staff updated' : 'Staff created', 'success');
+      if (res.data?.generatedPassword) {
+        addToast(`Staff created. Login: ${res.data.email} | Password: ${res.data.generatedPassword}`, 'success');
+      } else {
+        addToast(editingId ? 'Staff updated' : 'Staff created', 'success');
+      }
       cancelForm(); fetchStaff();
     } else {
       addToast(res.error || 'Failed to save staff', 'error');

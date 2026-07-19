@@ -51,13 +51,13 @@ class StaffService extends BaseService<Staff> {
     }
   }
 
-  async create(item: Omit<Staff, 'id'>): Promise<ApiResponse<Staff>> {
+  async create(item: Omit<Staff, 'id'>): Promise<ApiResponse<Staff & { generatedPassword?: string }>> {
     try {
       const res = await super.create(this.toBackend(item) as any);
       if (res.success && res.data) {
         const d = res.data as any;
         if (d.fullName || d.role?.name) {
-          return { success: true, data: this.toStaff(d) };
+          return { success: true, data: { ...this.toStaff(d), generatedPassword: d.generatedPassword } };
         }
       }
       return res;

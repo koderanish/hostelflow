@@ -1,7 +1,13 @@
+import crypto from 'crypto';
 import prisma from '../../config/database';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10;
+
+function generatePassword(length = 8): string {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({ length }, () => chars[crypto.randomInt(chars.length)]).join('');
+}
 
 const userSelect = {
   id: true,
@@ -63,9 +69,10 @@ export const create = async (data: any) => {
     roleId = defaultRole?.id;
   }
 
-  const hashedPassword = data.password ? await bcrypt.hash(data.password, SALT_ROUNDS) : await bcrypt.hash('changeme123', SALT_ROUNDS);
+  const plainPassword = data.password || generatePassword();
+  const hashedPassword = await bcrypt.hash(plainPassword, SALT_ROUNDS);
 
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       fullName: data.fullName || data.name,
       email: data.email,
@@ -76,6 +83,8 @@ export const create = async (data: any) => {
     },
     select: userSelect,
   });
+
+  return { ...user, generatedPassword: plainPassword };
 };
 
 export const update = async (id: string, data: any) => {
@@ -94,6 +103,25 @@ export const update = async (id: string, data: any) => {
   }
 
   return prisma.user.update({ where: { id }, data: updateData, select: userSelect });
+};
+
+export const resetPassword = async (id: string) => {
+  const user = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, fullName: true } });
+  if (!user) throw new Error('User not found');
+
+  const plainPassword = generatePassword();
+  const hashedPassword = await bcrypt.hash(plainPassword, SALT_ROUNDS);
+
+  await prisma.user.update({
+    where: { id },
+    data: { password: hashedPassword },
+  });
+
+  return {
+    loginId: user.email,
+    name: user.fullName,
+    generatedPassword: plainPassword,
+  };
 };
 
 export const remove = async (id: string) => {
