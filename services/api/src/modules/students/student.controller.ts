@@ -11,6 +11,10 @@ export const getById = asyncHandler(async (req: Request, res: Response) => {
   const data = await service.getById(req.params.id);
   sendSuccess(res, data);
 });
+export const getByUserId = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getByUserId(req.params.userId);
+  sendSuccess(res, data);
+});
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const data = await service.create(req.body);
   sendSuccess(res, data, 'Created successfully', 201);

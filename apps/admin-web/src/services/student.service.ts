@@ -73,7 +73,7 @@ function toBackend(item: any): any {
 
 class StudentService {
   async getAll(): Promise<ApiResponse<Student[]>> {
-    const res = await api.get<any>(`/students`);
+    const res = await api.get<any>(`/students?limit=100`);
     if (!res.success) return { success: false, error: res.error || 'Failed to fetch students' };
     const data = res.data?.data ?? res.data ?? [];
     return { success: true, data: (Array.isArray(data) ? data : []).map((d: any) => toStudent(d)) };
@@ -129,9 +129,10 @@ class StudentService {
   }
 
   async getByUserId(userId: string): Promise<ApiResponse<Student | undefined>> {
-    const res = await this.getAll();
-    if (!res.success) return { success: false, error: res.error };
-    return { success: true, data: (res.data || []).find(s => s.userId === userId) };
+    const res = await api.get<any>(`/students/by-user/${userId}`);
+    if (!res.success) return { success: false, error: res.error || 'Student not found' };
+    if (!res.data) return { success: true, data: undefined };
+    return { success: true, data: toStudent(res.data) };
   }
 
   async checkEnrollmentUnique(enrollmentNo: string, _excludeId?: string): Promise<ApiResponse<boolean>> {

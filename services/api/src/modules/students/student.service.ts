@@ -99,6 +99,10 @@ export const getById = async (id: string) => {
   return prisma.student.findUnique({ where: { id }, select: studentSelect });
 };
 
+export const getByUserId = async (userId: string) => {
+  return prisma.student.findFirst({ where: { userId }, select: studentSelect });
+};
+
 export const create = async (data: any) => {
   const role = await prisma.role.findFirst({ where: { name: 'STUDENT' } });
   if (!role) throw new Error('STUDENT role not found');
