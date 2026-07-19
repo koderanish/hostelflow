@@ -39,6 +39,17 @@ class ApplicationService {
     return { success: true, data: extractList(res) };
   }
 
+  async getByStudent(studentId: string): Promise<ApiResponse<HostelApplication[]>> {
+    const res = await api.get<any>(`/applications?studentId=${studentId}&limit=50`);
+    return { success: true, data: extractList(res) };
+  }
+
+  async getActiveByStudent(studentId: string): Promise<ApiResponse<HostelApplication[]>> {
+    const res = await api.get<any>(`/applications?studentId=${studentId}&status=Pending&limit=50`);
+    const all = extractList(res);
+    return { success: true, data: all.filter(a => a.status === 'Pending' || a.status === 'Waitlisted') };
+  }
+
   async getById(id: string): Promise<ApiResponse<HostelApplication>> {
     const res = await api.get<any>(`/applications/${id}`);
     if (res.success) {
@@ -64,6 +75,8 @@ class ApplicationService {
 
   async createApplication(data: {
     studentId: string; preferredHostelId: string; preferredRoomType?: string; reason?: string;
+    studentName?: string; course?: string; year?: string; academicYear?: string; semester?: string;
+    appliedDate?: string;
   }): Promise<ApiResponse<HostelApplication>> {
     try {
       const res = await api.post<any>('/applications', data);
@@ -73,6 +86,15 @@ class ApplicationService {
       }
     } catch {}
     return { success: false, error: 'Failed to create application' };
+  }
+
+  async updateApplication(id: string, data: any): Promise<ApiResponse<HostelApplication>> {
+    const res = await api.patch<any>(`/applications/${id}`, data);
+    if (res.success) {
+      const d = res.data?.data ?? res.data;
+      return { success: true, data: toApp(d) };
+    }
+    return { success: false, error: 'Failed to update application' };
   }
 
   async approveApplication(id: string, reviewedBy: string, reviewRemarks?: string): Promise<ApiResponse<HostelApplication>> {

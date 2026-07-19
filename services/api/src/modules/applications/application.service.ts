@@ -79,10 +79,14 @@ export const list = async (params: any) => {
   const search = params.search || '';
   const status = params.status;
   const hostelId = params.hostelId;
+  const studentId = params.studentId;
   const sortBy = sortMap[params.sortBy as string] || 'createdAt';
   const sortOrder = params.sortOrder === 'asc' ? 'asc' : 'desc';
 
   const where: Prisma.ApplicationWhereInput = { isDeleted: false };
+  if (studentId) {
+    where.studentId = studentId;
+  }
   if (status && status !== 'all') {
     where.status = STATUS_REVERSE[status as string] || status;
   }

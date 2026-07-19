@@ -36,6 +36,11 @@ class ComplaintService {
     return { success: true, data: extractList(res) };
   }
 
+  async getByStudent(studentId: string): Promise<ApiResponse<Complaint[]>> {
+    const res = await api.get<any>(`/complaints?studentId=${studentId}&limit=50`);
+    return { success: true, data: extractList(res) };
+  }
+
   async getById(id: string): Promise<ApiResponse<Complaint>> {
     const res = await api.get<any>(`/complaints/${id}`);
     if (res.success) {
@@ -63,6 +68,7 @@ class ComplaintService {
     studentId: string; roomId: string; roomNo: string;
     title: string; description: string;
     category: string; priority: string;
+    studentName?: string;
   }): Promise<ApiResponse<Complaint>> {
     const res = await api.post<any>('/complaints', data);
     if (res.success) {

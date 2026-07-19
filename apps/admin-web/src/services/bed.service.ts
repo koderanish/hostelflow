@@ -91,6 +91,28 @@ class BedService {
     } catch {}
     return { success: false, error: 'Bed not found' };
   }
+
+  async vacate(bedId: string, performedBy?: string): Promise<ApiResponse<Bed>> {
+    try {
+      const res = await api.patch<any>(`/beds/${bedId}`, { status: 'AVAILABLE', studentId: null });
+      if (res.success) {
+        const d = res.data?.data ?? res.data;
+        return { success: true, data: toBed(d) };
+      }
+    } catch {}
+    return { success: false, error: 'Failed to vacate bed' };
+  }
+
+  async allocate(studentId: string, bedId: string, performedBy?: string): Promise<ApiResponse<Bed>> {
+    try {
+      const res = await api.patch<any>(`/beds/${bedId}`, { status: 'OCCUPIED', studentId });
+      if (res.success) {
+        const d = res.data?.data ?? res.data;
+        return { success: true, data: toBed(d) };
+      }
+    } catch {}
+    return { success: false, error: 'Failed to allocate bed' };
+  }
 }
 
 export const bedService = new BedService();

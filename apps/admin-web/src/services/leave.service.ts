@@ -31,6 +31,11 @@ class LeaveService {
     return { success: true, data: extractList(res) };
   }
 
+  async getByStudent(studentId: string): Promise<ApiResponse<LeaveRequest[]>> {
+    const res = await api.get<any>(`/leaves?studentId=${studentId}&limit=50`);
+    return { success: true, data: extractList(res) };
+  }
+
   async getById(id: string): Promise<ApiResponse<LeaveRequest>> {
     const res = await api.get<any>(`/leaves/${id}`);
     if (res.success) {
@@ -58,6 +63,7 @@ class LeaveService {
     studentId: string; leaveType: string;
     fromDate: string; toDate: string;
     reason: string; remarks?: string;
+    studentName?: string;
   }): Promise<ApiResponse<LeaveRequest>> {
     const res = await api.post<any>('/leaves', data);
     if (res.success) {
