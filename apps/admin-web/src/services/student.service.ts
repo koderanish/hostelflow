@@ -1,5 +1,6 @@
 import { BaseService } from './base.service';
-import type { Student } from '../types';
+import { mockApiCall, mockPaginatedApiCall } from '../api/client';
+import type { ApiResponse, PaginatedResponse, Student } from '../types';
 import { INITIAL_STUDENTS } from '../data';
 import { generateId } from '../utils';
 
@@ -10,6 +11,23 @@ class StudentService extends BaseService<Student> {
 
   protected async getAllLocally() {
     return this.getAllFromStorage().filter((s: any) => !s.isDeleted);
+  }
+
+  async getAll(): Promise<ApiResponse<Student[]>> {
+    return mockApiCall(this.getAllFromStorage());
+  }
+
+  async getById(id: string): Promise<ApiResponse<Student>> {
+    const item = this.getAllFromStorage().find(i => i.id === id);
+    if (!item) return { success: false, error: 'Not found' };
+    return mockApiCall(item);
+  }
+
+  async getPaginated(
+    page = 1, limit = 10, search?: string,
+    filters?: Record<string, string>, sortBy?: string, sortOrder?: 'asc' | 'desc'
+  ): Promise<ApiResponse<PaginatedResponse<Student>>> {
+    return mockPaginatedApiCall(this.getAllFromStorage(), page, limit, search, filters, sortBy, sortOrder);
   }
 
   async getByHostel(hostelId: string) {
