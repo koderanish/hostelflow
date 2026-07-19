@@ -252,6 +252,7 @@ model Leave {
   status     String    @default("PENDING") @db.VarChar(20)
   approvedBy String?   @map("approved_by") @db.Uuid
   remarks    String?   @db.Text
+  isDeleted  Boolean   @default(false) @map("is_deleted")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 

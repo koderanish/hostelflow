@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const createSchema = z.object({
-  studentId: z.string().uuid('Invalid student'),
-  leaveType: z.enum(['Medical', 'Personal', 'Family', 'Emergency', 'Other']).optional().default('Personal'),
+  studentId: z.string().min(1, 'Student is required'),
+  leaveType: z.string().optional(),
   fromDate: z.string().min(1, 'From date is required'),
   toDate: z.string().min(1, 'To date is required'),
   reason: z.string().min(1, 'Reason is required'),
@@ -10,13 +10,11 @@ export const createSchema = z.object({
 });
 
 export const updateSchema = z.object({
-  leaveType: z.enum(['Medical', 'Personal', 'Family', 'Emergency', 'Other']).optional(),
+  leaveType: z.string().optional(),
   fromDate: z.string().optional(),
   toDate: z.string().optional(),
   reason: z.string().optional(),
-  status: z.string().optional(),
   remarks: z.string().optional(),
-  approvedBy: z.string().uuid().optional(),
 });
 
 export const querySchema = z.object({
@@ -28,4 +26,14 @@ export const querySchema = z.object({
   studentId: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.string().optional(),
+});
+
+export const actionSchema = z.object({
+  approvedBy: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+export const rejectSchema = z.object({
+  approvedBy: z.string().optional(),
+  remarks: z.string().min(1, 'Remarks are required for rejection'),
 });
