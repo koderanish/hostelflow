@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { studentService } from '../../services/student.service';
 import { studentEventService } from '../../services/student-event.service';
-import { hostelService } from '../../services/hostel.service';
 import type { Student, StudentEvent } from '../../types';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -37,7 +36,6 @@ export function StudentDetailsPage() {
   const navigate = useNavigate();
   const { addToast } = useNotify();
   const [student, setStudent] = useState<Student | null>(null);
-  const [hostelName, setHostelName] = useState('');
   const [loading, setLoading] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -50,13 +48,10 @@ export function StudentDetailsPage() {
     if (!id) return;
     Promise.all([
       studentService.getById(id),
-      hostelService.getAll(),
       studentEventService.getByStudent(id),
-    ]).then(([stuRes, hostelRes, evtRes]) => {
+    ]).then(([stuRes, evtRes]) => {
       if (stuRes.success && stuRes.data && !stuRes.data.isDeleted) {
         setStudent(stuRes.data);
-        const hName = hostelRes.data?.find(h => h.id === stuRes.data!.hostelId)?.name || '';
-        setHostelName(hName);
         setEvents(evtRes.data || []);
       } else {
         navigate('/admin/students');
@@ -284,7 +279,7 @@ export function StudentDetailsPage() {
           </h3>
           {student.hostelId ? (
             <div className="space-y-0">
-              {infoRow('Hostel', hostelName || student.hostelId)}
+              {infoRow('Hostel', student.hostelName || student.hostelId || '-')}
               {infoRow('Room No', student.roomNo || student.roomId || '-')}
               {infoRow('Room ID', student.roomId || '-')}
             </div>

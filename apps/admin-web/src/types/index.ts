@@ -67,6 +67,7 @@ export interface Student {
   emergencyContactPhone: string;
   emergencyContactRelation?: string;
   hostelId?: string;
+  hostelName?: string;
   roomId?: string;
   roomNo?: string;
   status: 'Active' | 'Inactive' | 'Suspended' | 'Graduated';

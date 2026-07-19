@@ -31,12 +31,21 @@ const studentSelect = {
   admissionDate: true,
   createdAt: true,
   updatedAt: true,
-  hostelId: true,
-  roomId: true,
-  hostel: { select: { id: true, name: true } },
-  room: { select: { id: true, roomNo: true } },
   user: {
     select: { id: true, fullName: true, email: true, phone: true, status: true, createdAt: true },
+  },
+  allocations: {
+    where: { status: 'ACTIVE' },
+    take: 1,
+    orderBy: { allocatedDate: 'desc' as const },
+    select: {
+      id: true,
+      roomId: true,
+      bedId: true,
+      status: true,
+      room: { select: { id: true, roomNumber: true, hostelId: true, hostel: { select: { id: true, name: true } } } },
+      bed: { select: { id: true, bedNumber: true } },
+    },
   },
 };
 
