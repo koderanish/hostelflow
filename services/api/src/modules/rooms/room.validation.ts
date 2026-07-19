@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const createSchema = z.object({
-  hostelId: z.string().uuid('Hostel is required'),
+  hostelId: z.string().uuid().nullable().optional(),
   buildingId: z.string().uuid().nullable().optional(),
   roomNumber: z.string().min(1, 'Room number is required').max(20),
   floor: z.number().int().optional(),
@@ -12,6 +12,7 @@ export const createSchema = z.object({
 });
 
 export const updateSchema = z.object({
+  hostelId: z.string().uuid().nullable().optional(),
   buildingId: z.string().uuid().nullable().optional(),
   roomNumber: z.string().min(1).max(20).optional(),
   floor: z.number().int().optional(),

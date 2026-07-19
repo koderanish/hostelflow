@@ -20,7 +20,7 @@ export interface User {
 
 export interface Building {
   id: string;
-  hostelId: string;
+  hostelId?: string;
   name: string;
   code: string;
   description?: string;
@@ -145,8 +145,8 @@ export interface Bed {
 
 export interface Room {
   id: string;
-  hostelId: string;
-  buildingId: string;
+  hostelId?: string;
+  buildingId?: string;
   roomNo: string;
   floor: number;
   roomType: 'Single' | 'Double' | 'Triple' | 'Dormitory';

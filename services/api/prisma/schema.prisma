@@ -98,7 +98,7 @@ model Hostel {
 
 model Building {
   id          String  @id @default(uuid()) @db.Uuid
-  hostelId    String  @map("hostel_id") @db.Uuid
+  hostelId    String? @map("hostel_id") @db.Uuid
   name        String  @db.VarChar(100)
   code        String  @db.VarChar(30)
   description String? @db.Text
@@ -108,7 +108,7 @@ model Building {
   status      String  @default("Active") @db.VarChar(20)
   wardenId    String? @map("warden_id") @db.Uuid
 
-  hostel Hostel @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  hostel Hostel? @relation(fields: [hostelId], references: [id], onDelete: SetNull)
   rooms  Room[]
   warden User?  @relation("BuildingWarden", fields: [wardenId], references: [id])
 
@@ -118,7 +118,7 @@ model Building {
 
 model Room {
   id         String  @id @default(uuid()) @db.Uuid
-  hostelId   String  @map("hostel_id") @db.Uuid
+  hostelId   String? @map("hostel_id") @db.Uuid
   buildingId String? @map("building_id") @db.Uuid
   roomNumber String  @map("room_number") @db.VarChar(20)
   floor      Int?
@@ -128,7 +128,7 @@ model Room {
   price      Decimal? @db.Decimal(10, 2)
   status     String  @default("AVAILABLE") @db.VarChar(20)
 
-  hostel   Hostel       @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  hostel   Hostel?      @relation(fields: [hostelId], references: [id], onDelete: SetNull)
   building Building?    @relation(fields: [buildingId], references: [id])
   allocations Allocation[]
 

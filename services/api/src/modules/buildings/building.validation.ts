@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const createSchema = z.object({
-  hostelId: z.string().uuid('Hostel is required'),
+  hostelId: z.string().uuid().nullable().optional(),
   name: z.string().min(1, 'Building name is required').max(100),
   code: z.string().min(1, 'Building code is required').max(30),
   description: z.string().optional(),
@@ -13,6 +13,7 @@ export const createSchema = z.object({
 });
 
 export const updateSchema = z.object({
+  hostelId: z.string().uuid().nullable().optional(),
   name: z.string().min(1).max(100).optional(),
   code: z.string().min(1).max(30).optional(),
   description: z.string().optional(),
