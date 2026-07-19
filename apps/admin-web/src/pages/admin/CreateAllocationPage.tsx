@@ -154,7 +154,7 @@ export function CreateAllocationPage() {
 
   const filteredBuildings = buildings.filter(b => !selectedHostelId || b.hostelId === selectedHostelId);
   const filteredRooms = rooms.filter(r => !selectedBuildingId || r.buildingId === selectedBuildingId);
-  const filteredBeds = beds.filter(b => !selectedRoomId || b.roomId === selectedRoomId);
+  const filteredBeds = beds.filter(b => b.roomId === selectedRoomId);
 
   return (
     <div className="space-y-6 animate-fade-in">

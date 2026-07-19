@@ -14,7 +14,7 @@ const NAV_ITEMS: Record<string, { id: string; label: string; icon: string; path:
     { id: 'buildings', label: 'Buildings', icon: 'Building2', path: '/admin/buildings' },
     { id: 'rooms', label: 'Rooms', icon: 'DoorOpen', path: '/admin/rooms' },
     { id: 'applications', label: 'Applications', icon: 'FileText', path: '/admin/applications' },
-    { id: 'allocations', label: 'Room Application', icon: 'CheckSquare', path: '/admin/allocations' },
+    { id: 'allocations', label: 'Allocations', icon: 'CheckSquare', path: '/admin/allocations' },
     { id: 'fees', label: 'Fees Management', icon: 'Wallet', path: '/admin/fees' },
     { id: 'attendance', label: 'Attendance', icon: 'ClipboardCheck', path: '/admin/attendance' },
     { id: 'leaves', label: 'Leave Requests', icon: 'Calendar', path: '/admin/leaves' },

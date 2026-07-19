@@ -134,6 +134,18 @@ async function main() {
   }
   console.log(`  ${roomCounter} rooms created`);
 
+  // Create beds for each room
+  const allRooms = await prisma.room.findMany();
+  const bedData: { roomId: string; bedNumber: string }[] = [];
+  for (const room of allRooms) {
+    const cap = room.capacity || 1;
+    for (let b = 1; b <= cap; b++) {
+      bedData.push({ roomId: room.id, bedNumber: `B${String.fromCharCode(64 + b)}` });
+    }
+  }
+  await prisma.bed.createMany({ data: bedData, skipDuplicates: true });
+  console.log(`  ${bedData.length} beds created`);
+
   console.log('\nSeed complete!');
   console.log('Demo accounts:');
   console.log('  admin@hostelflow.com / admin123  (Admin)');

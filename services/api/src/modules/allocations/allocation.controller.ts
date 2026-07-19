@@ -23,3 +23,11 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
   await service.remove(req.params.id);
   sendSuccess(res, null, 'Deleted successfully', 204);
 });
+export const vacate = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.vacate(req.params.id);
+  sendSuccess(res, data, 'Vacated successfully');
+});
+export const transfer = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.transfer(req.params.id, req.body);
+  sendSuccess(res, data, 'Transferred successfully');
+});

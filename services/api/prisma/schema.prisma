@@ -131,10 +131,25 @@ model Room {
   hostel   Hostel?      @relation(fields: [hostelId], references: [id], onDelete: SetNull)
   building Building?    @relation(fields: [buildingId], references: [id])
   allocations Allocation[]
+  beds         Bed[]
 
   @@index([hostelId])
   @@index([buildingId])
   @@map("rooms")
+}
+
+model Bed {
+  id        String @id @default(uuid()) @db.Uuid
+  roomId    String @map("room_id") @db.Uuid
+  bedNumber String @map("bed_number") @db.VarChar(20)
+  status    String @default("AVAILABLE") @db.VarChar(20)
+  studentId String? @map("student_id") @db.Uuid
+
+  room        Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  allocations Allocation[]
+
+  @@index([roomId])
+  @@map("beds")
 }
 
 model Application {
@@ -146,25 +161,34 @@ model Application {
   status            String   @default("PENDING") @db.VarChar(20)
   createdAt         DateTime @default(now()) @map("created_at")
 
-  student Student @relation(fields: [studentId], references: [id])
-  hostel  Hostel  @relation(fields: [hostelId], references: [id])
+  student     Student       @relation(fields: [studentId], references: [id])
+  hostel      Hostel        @relation(fields: [hostelId], references: [id])
+  allocations Allocation[]
 
   @@map("applications")
 }
 
 model Allocation {
-  id            String   @id @default(uuid()) @db.Uuid
-  studentId     String   @map("student_id") @db.Uuid
-  roomId        String   @map("room_id") @db.Uuid
-  allocatedDate DateTime? @map("allocated_date") @db.Date
-  checkIn       DateTime? @map("check_in") @db.Date
-  checkOut      DateTime? @map("check_out") @db.Date
-  status        String   @default("ACTIVE") @db.VarChar(20)
+  id                 String   @id @default(uuid()) @db.Uuid
+  studentId          String   @map("student_id") @db.Uuid
+  roomId             String   @map("room_id") @db.Uuid
+  bedId              String?  @map("bed_id") @db.Uuid
+  applicationId      String?  @map("application_id") @db.Uuid
+  allocatedDate      DateTime? @map("allocated_date") @db.Date
+  expectedVacateDate DateTime? @map("expected_vacate_date") @db.Date
+  checkIn            DateTime? @map("check_in") @db.Date
+  checkOut           DateTime? @map("check_out") @db.Date
+  status             String   @default("ACTIVE") @db.VarChar(20)
+  transferHistory    Json?    @map("transfer_history")
 
-  student Student @relation(fields: [studentId], references: [id])
-  room    Room    @relation(fields: [roomId], references: [id])
+  student     Student      @relation(fields: [studentId], references: [id])
+  room        Room         @relation(fields: [roomId], references: [id])
+  bed         Bed?         @relation(fields: [bedId], references: [id], onDelete: SetNull)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
   @@index([studentId])
+  @@index([roomId])
+  @@index([bedId])
   @@map("allocations")
 }
 

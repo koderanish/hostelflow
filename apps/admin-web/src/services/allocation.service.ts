@@ -1,37 +1,116 @@
-import { BaseService } from './base.service';
-import type { RoomAllocation } from '../types';
-import { INITIAL_ALLOCATIONS } from '../data';
-import { generateId } from '../utils';
+import { api } from '../api/client';
+import type { ApiResponse, PaginatedResponse, RoomAllocation } from '../types';
 
-const STATUS_TRANSITIONS: Record<string, string[]> = {
-  Active: ['Transferred', 'Vacated', 'Cancelled'],
-  Transferred: ['Vacated'],
-  Vacated: [],
-  Cancelled: [],
+const STATUS_MAP: Record<string, RoomAllocation['status']> = {
+  ACTIVE: 'Active',
+  TRANSFERRED: 'Transferred',
+  VACATED: 'Vacated',
+  CANCELLED: 'Cancelled',
 };
 
-class AllocationService extends BaseService<RoomAllocation> {
-  constructor() {
-    super('allocations', INITIAL_ALLOCATIONS as RoomAllocation[]);
+function toAllocation(d: any): RoomAllocation {
+  return {
+    id: d.id,
+    studentId: d.studentId || '',
+    studentName: d.student?.user?.fullName || d.studentName || '',
+    hostelId: d.room?.hostelId || d.hostelId || '',
+    hostelName: d.room?.hostel?.hostelName || d.hostelName || '',
+    roomId: d.roomId || '',
+    roomNo: d.room?.roomNumber || d.roomNo || '',
+    bedId: d.bedId || '',
+    bedNo: d.bed?.bedNumber || d.bedNo || '',
+    buildingId: d.room?.buildingId || d.buildingId || '',
+    applicationId: d.applicationId || '',
+    dateAllocated: d.allocatedDate
+      ? (typeof d.allocatedDate === 'string' ? d.allocatedDate : new Date(d.allocatedDate).toISOString().split('T')[0])
+      : '',
+    expectedVacateDate: d.expectedVacateDate
+      ? (typeof d.expectedVacateDate === 'string' ? d.expectedVacateDate : new Date(d.expectedVacateDate).toISOString().split('T')[0])
+      : '',
+    dateVacated: d.checkOut
+      ? (typeof d.checkOut === 'string' ? d.checkOut : new Date(d.checkOut).toISOString().split('T')[0])
+      : '',
+    status: STATUS_MAP[d.status] || d.status || 'Active',
+    transferHistory: d.transferHistory || [],
+    isDeleted: false,
+    createdAt: d.createdAt ? (typeof d.createdAt === 'string' ? d.createdAt : new Date(d.createdAt).toISOString()) : '',
+    updatedAt: d.updatedAt ? (typeof d.updatedAt === 'string' ? d.updatedAt : new Date(d.updatedAt).toISOString()) : '',
+  };
+}
+
+function extractPagination(d: any, page: number, limit: number) {
+  const items = d?.data?.data ?? d?.data ?? d ?? [];
+  const pagination = d?.data?.pagination ?? d?.pagination ?? { total: 0, page, limit, totalPages: 0 };
+  return { items: Array.isArray(items) ? items : [], pagination };
+}
+
+class AllocationService {
+  async getAll(): Promise<ApiResponse<RoomAllocation[]>> {
+    const res = await api.get<any>(`/allocations`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to fetch allocations' };
+    const data = res.data?.data ?? res.data ?? [];
+    return { success: true, data: (Array.isArray(data) ? data : []).map(toAllocation) };
   }
 
-  async getActive() {
-    return this.getAllFromStorage().filter(a => a.status === 'Active' && !a.isDeleted);
+  async getById(id: string): Promise<ApiResponse<RoomAllocation>> {
+    const res = await api.get<any>(`/allocations/${id}`);
+    if (!res.success) return { success: false, error: res.error || 'Not found' };
+    return { success: true, data: toAllocation(res.data) };
   }
 
-  async getByStudent(studentId: string) {
-    const all = this.getAllFromStorage().filter(a => !a.isDeleted);
-    return { success: true, data: all.filter(a => a.studentId === studentId) };
+  async getPaginated(
+    page = 1, limit = 10, search?: string,
+    filters?: Record<string, string>, sortBy?: string, sortOrder?: 'asc' | 'desc'
+  ): Promise<ApiResponse<PaginatedResponse<RoomAllocation>>> {
+    const params: Record<string, string | number> = { page, limit };
+    if (search) params.search = search;
+    if (sortBy) { params.sortBy = sortBy; params.sortOrder = sortOrder || 'asc'; }
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v && v !== 'all') params[k] = v;
+      });
+    }
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
+    const res = await api.get<any>(`/allocations?${sp.toString()}`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to fetch allocations' };
+    const { items, pagination } = extractPagination(res, page, limit);
+    return {
+      success: true,
+      data: {
+        data: items.map(toAllocation),
+        total: pagination.total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: pagination.totalPages,
+      },
+    };
   }
 
-  async getByHostel(hostelId: string) {
-    const all = this.getAllFromStorage().filter(a => !a.isDeleted);
-    return { success: true, data: all.filter(a => a.hostelId === hostelId) };
+  async getActive(): Promise<ApiResponse<RoomAllocation[]>> {
+    const res = await this.getAll();
+    if (!res.success) return res;
+    return { success: true, data: (res.data || []).filter(a => a.status === 'Active') };
   }
 
-  async getByRoom(roomId: string) {
-    const all = this.getAllFromStorage().filter(a => !a.isDeleted);
-    return { success: true, data: all.filter(a => a.roomId === roomId) };
+  async getByStudent(studentId: string): Promise<ApiResponse<RoomAllocation[]>> {
+    const res = await api.get<any>(`/allocations?studentId=${studentId}`);
+    if (!res.success) return { success: false, error: res.error };
+    const { items } = extractPagination(res, 1, 100);
+    return { success: true, data: items.map(toAllocation) };
+  }
+
+  async getByHostel(hostelId: string): Promise<ApiResponse<RoomAllocation[]>> {
+    const all = await this.getAll();
+    if (!all.success) return all;
+    return { success: true, data: (all.data || []).filter(a => a.hostelId === hostelId) };
+  }
+
+  async getByRoom(roomId: string): Promise<ApiResponse<RoomAllocation[]>> {
+    const res = await api.get<any>(`/allocations?roomId=${roomId}`);
+    if (!res.success) return { success: false, error: res.error };
+    const { items } = extractPagination(res, 1, 100);
+    return { success: true, data: items.map(toAllocation) };
   }
 
   async createAllocation(data: {
@@ -44,306 +123,56 @@ class AllocationService extends BaseService<RoomAllocation> {
     dateAllocated: string;
     expectedVacateDate?: string;
   }) {
-    // Business rule: student must exist
-    const { studentService } = await import('./student.service');
-    const stuRes = await studentService.getById(data.studentId);
-    if (!stuRes.success || !stuRes.data || stuRes.data.isDeleted) {
-      return { success: false, error: 'Student not found' };
-    }
-
-    // Business rule: student can have only one active allocation
-    const activeAllocs = await this.getActive();
-    const existingActive = activeAllocs.find(a => a.studentId === data.studentId);
-    if (existingActive) {
-      return { success: false, error: 'Student already has an active allocation' };
-    }
-
-    // Business rule: only approved applications can be allocated
-    if (data.applicationId) {
-      const { applicationService } = await import('./application.service');
-      const appRes = await applicationService.getById(data.applicationId);
-      if (!appRes.success || !appRes.data) {
-        return { success: false, error: 'Application not found' };
-      }
-      if (appRes.data.status !== 'Approved') {
-        return { success: false, error: 'Only approved applications can be allocated' };
-      }
-    }
-
-    // Business rule: bed must be available
-    const { bedService } = await import('./bed.service');
-    const bedRes = await bedService.getById(data.bedId);
-    if (!bedRes.success || !bedRes.data) {
-      return { success: false, error: 'Bed not found' };
-    }
-    if (bedRes.data.status !== 'Available') {
-      return { success: false, error: `Bed is not available. Current status: ${bedRes.data.status}` };
-    }
-
-    // Gender validation
-    const buildingRes = data.buildingId ? await import('./building.service').then(m => m.buildingService.getById(data.buildingId!)) : null;
-    if (buildingRes && buildingRes.success && buildingRes.data && buildingRes.data.gender) {
-      if (buildingRes.data.gender !== stuRes.data.gender) {
-        return { success: false, error: `Gender mismatch: building is ${buildingRes.data.gender}, student is ${stuRes.data.gender}` };
-      }
-    }
-
-    const now = new Date().toISOString();
-    const newAlloc: RoomAllocation = {
-      id: generateId(),
+    const res = await api.post<any>(`/allocations`, {
       studentId: data.studentId,
-      studentName: data.studentName,
-      applicationId: data.applicationId,
-      hostelId: data.hostelId,
-      hostelName: data.hostelName,
-      buildingId: data.buildingId,
       roomId: data.roomId,
-      roomNo: data.roomNo,
-      bedId: data.bedId,
-      bedNo: data.bedNo,
-      dateAllocated: data.dateAllocated,
-      expectedVacateDate: data.expectedVacateDate,
-      status: 'Active',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Allocate the bed via bed service
-    const allocRes = await bedService.allocate(data.studentId, data.bedId);
-    if (!allocRes.success) {
-      return allocRes;
-    }
-
-    // Sync room occupancy
-    const { roomService } = await import('./room.service');
-    await roomService.syncOccupancy(data.roomId);
-
-    // Update student room info
-    if (stuRes.success && stuRes.data) {
-      await studentService.updateStudent(data.studentId, { hostelId: data.hostelId, roomId: data.roomId, roomNo: data.roomNo });
-    }
-
-    const all = this.getAllFromStorage();
-    all.push(newAlloc);
-    this.saveToStorage(all);
-
-    const { allocationEventService } = await import('./allocation-event.service');
-    await allocationEventService.log(newAlloc.id, 'Allocated', undefined, undefined, 'Active', `Allocated to room ${data.roomNo}, bed ${data.bedNo || data.bedId}`);
-
-    // Notify student
-    if (stuRes.success && stuRes.data?.userId) {
-      const { notificationService } = await import('./notification.service');
-      await notificationService.add({ userId: stuRes.data.userId, title: 'Room Allocated', message: `You have been allocated to ${data.roomNo} in ${data.hostelName}.`, type: 'Room Allocation', read: false, date: new Date().toISOString().split('T')[0] });
-    }
-
-    return { success: true, data: newAlloc };
+      bedId: data.bedId || undefined,
+      applicationId: data.applicationId || undefined,
+      allocatedDate: data.dateAllocated || new Date().toISOString().split('T')[0],
+      expectedVacateDate: data.expectedVacateDate || undefined,
+    });
+    if (!res.success) return { success: false, error: res.error || 'Failed to create allocation' };
+    return { success: true, data: toAllocation(res.data) };
   }
 
   async transferAllocation(id: string, data: {
     roomId: string; roomNo: string; bedId: string; bedNo?: string;
     hostelId: string; hostelName: string; buildingId?: string;
   }) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Allocation not found' };
-
-    const alloc = all[idx];
-    if (alloc.isDeleted) return { success: false, error: 'Allocation is deleted' };
-    if (alloc.status !== 'Active') return { success: false, error: `Cannot transfer allocation with status '${alloc.status}'. Only active allocations can be transferred.` };
-
-    // Bed must be available
-    const { bedService } = await import('./bed.service');
-    const bedRes = await bedService.getById(data.bedId);
-    if (!bedRes.success || !bedRes.data) return { success: false, error: 'Target bed not found' };
-    if (bedRes.data.status !== 'Available') return { success: false, error: `Target bed is not available. Current status: ${bedRes.data.status}` };
-
-    // Release old bed
-    if (alloc.bedId) {
-      await bedService.vacate(alloc.bedId);
-    }
-
-    // Allocate new bed
-    const newBedRes = await bedService.allocate(alloc.studentId, data.bedId);
-    if (!newBedRes.success) return newBedRes;
-
-    // Mark old allocation as Transferred
-    const oldStatus = alloc.status;
-    const oldRoomNo = alloc.roomNo;
-    const transferNote = `Transferred from ${oldRoomNo} to ${data.roomNo}`;
-    if (!alloc.transferHistory) alloc.transferHistory = [];
-    alloc.transferHistory.push(`${transferNote} on ${new Date().toISOString()}`);
-    all[idx] = {
-      ...alloc,
-      status: 'Transferred',
-      dateVacated: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.saveToStorage(all);
-
-    // Create new active allocation record
-    const now = new Date().toISOString();
-    const newAlloc: RoomAllocation = {
-      id: generateId(),
-      studentId: alloc.studentId,
-      studentName: alloc.studentName,
-      hostelId: data.hostelId,
-      hostelName: data.hostelName,
-      buildingId: data.buildingId,
+    const res = await api.post<any>(`/allocations/${id}/transfer`, {
       roomId: data.roomId,
-      roomNo: data.roomNo,
-      bedId: data.bedId,
-      bedNo: data.bedNo,
-      applicationId: alloc.applicationId,
-      dateAllocated: now,
-      expectedVacateDate: alloc.expectedVacateDate,
-      status: 'Active',
-      transferHistory: [`Transferred from ${alloc.roomNo}`],
-      createdAt: now,
-      updatedAt: now,
-    };
-    all.push(newAlloc);
-    this.saveToStorage(all);
-
-    // Sync room occupancy
-    const { roomService } = await import('./room.service');
-    await roomService.syncOccupancy(alloc.roomId);
-    await roomService.syncOccupancy(data.roomId);
-
-    const { allocationEventService } = await import('./allocation-event.service');
-    await allocationEventService.log(alloc.id, 'Transferred', undefined, oldStatus, 'Transferred', transferNote);
-    await allocationEventService.log(newAlloc.id, 'Allocated', undefined, undefined, 'Active', transferNote);
-
-    // Notify student
-    const { studentService } = await import('./student.service');
-    const stuRes = await studentService.getById(alloc.studentId);
-    if (stuRes.success && stuRes.data?.userId) {
-      const { notificationService } = await import('./notification.service');
-      await notificationService.add({ userId: stuRes.data.userId, title: 'Room Transferred', message: `You have been transferred from ${oldRoomNo} to ${data.roomNo}.`, type: 'Room Allocation', read: false, date: new Date().toISOString().split('T')[0] });
-    }
-
-    return { success: true, data: { oldAllocation: all[idx], newAllocation: newAlloc } };
+      bedId: data.bedId || undefined,
+    });
+    if (!res.success) return { success: false, error: res.error || 'Failed to transfer allocation' };
+    return { success: true, data: { newAllocation: toAllocation(res.data) } };
   }
 
   async vacateAllocation(id: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Allocation not found' };
-
-    const alloc = all[idx];
-    if (alloc.isDeleted) return { success: false, error: 'Allocation is deleted' };
-
-    const allowed = STATUS_TRANSITIONS[alloc.status] || [];
-    if (!allowed.includes('Vacated')) {
-      return { success: false, error: `Cannot vacate allocation with status '${alloc.status}'. Allowed transitions: ${allowed.join(', ') || 'none'}` };
-    }
-
-    // Release the bed
-    if (alloc.bedId) {
-      const { bedService } = await import('./bed.service');
-      await bedService.vacate(alloc.bedId);
-    }
-
-    const oldStatus = alloc.status;
-    all[idx] = {
-      ...alloc,
-      status: 'Vacated',
-      dateVacated: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.saveToStorage(all);
-
-    // Sync room occupancy
-    const { roomService } = await import('./room.service');
-    await roomService.syncOccupancy(alloc.roomId);
-
-    const { allocationEventService } = await import('./allocation-event.service');
-    await allocationEventService.log(alloc.id, 'Vacated', undefined, oldStatus, 'Vacated');
-
-    // Notify student
-    const { studentService } = await import('./student.service');
-    const stuRes = await studentService.getById(alloc.studentId);
-    if (stuRes.success && stuRes.data?.userId) {
-      const { notificationService } = await import('./notification.service');
-      await notificationService.add({ userId: stuRes.data.userId, title: 'Room Vacated', message: `Your room ${alloc.roomNo} has been vacated.`, type: 'Room Allocation', read: false, date: new Date().toISOString().split('T')[0] });
-    }
-
-    return { success: true, data: all[idx] };
+    const res = await api.post<any>(`/allocations/${id}/vacate`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to vacate allocation' };
+    return { success: true, data: toAllocation(res.data) };
   }
 
   async cancelAllocation(id: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Allocation not found' };
-
-    const alloc = all[idx];
-    if (alloc.isDeleted) return { success: false, error: 'Allocation is deleted' };
-
-    const allowed = STATUS_TRANSITIONS[alloc.status] || [];
-    if (!allowed.includes('Cancelled')) {
-      return { success: false, error: `Cannot cancel allocation with status '${alloc.status}'` };
-    }
-
-    // Release the bed if it was occupied
-    if (alloc.bedId) {
-      const { bedService } = await import('./bed.service');
-      await bedService.vacate(alloc.bedId);
-    }
-
-    const oldStatus = alloc.status;
-    all[idx] = {
-      ...alloc,
-      status: 'Cancelled',
-      dateVacated: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.saveToStorage(all);
-
-    const { roomService } = await import('./room.service');
-    await roomService.syncOccupancy(alloc.roomId);
-
-    const { allocationEventService } = await import('./allocation-event.service');
-    await allocationEventService.log(alloc.id, 'Cancelled', undefined, oldStatus, 'Cancelled');
-
-    return { success: true, data: all[idx] };
-  }
-
-  async updateAllocation(id: string, data: Partial<Omit<RoomAllocation, 'id' | 'isDeleted'>>) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Allocation not found' };
-
-    all[idx] = { ...all[idx], ...data, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-
-    const { allocationEventService } = await import('./allocation-event.service');
-    await allocationEventService.log(id, 'Updated', undefined, undefined, undefined, 'Allocation details updated');
-
-    return { success: true, data: all[idx] };
+    const res = await api.patch<any>(`/allocations/${id}`, { status: 'CANCELLED' });
+    if (!res.success) return { success: false, error: res.error || 'Failed to cancel allocation' };
+    return { success: true, data: toAllocation(res.data) };
   }
 
   async softDelete(id: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Allocation not found' };
-
-    all[idx] = { ...all[idx], isDeleted: true, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-    return { success: true, data: all[idx] };
+    const res = await api.delete<any>(`/allocations/${id}`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to delete allocation' };
+    return { success: true, data: res.data };
   }
 
   async restore(id: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Allocation not found' };
-
-    all[idx] = { ...all[idx], isDeleted: false, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-    return { success: true, data: all[idx] };
+    const res = await api.patch<any>(`/allocations/${id}`, { isDeleted: false });
+    if (!res.success) return { success: false, error: res.error || 'Failed to restore allocation' };
+    return { success: true, data: toAllocation(res.data) };
   }
 
-  async getHistory(allocationId: string) {
-    const { allocationEventService } = await import('./allocation-event.service');
-    return allocationEventService.getByAllocation(allocationId);
+  async getHistory(_allocationId: string): Promise<ApiResponse<any[]>> {
+    return { success: true, data: [] };
   }
 }
 
