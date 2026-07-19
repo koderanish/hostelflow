@@ -1,8 +1,5 @@
-import { BaseService } from './base.service';
-import { api, mockApiCall, mockPaginatedApiCall } from '../api/client';
+import { api } from '../api/client';
 import type { ApiResponse, PaginatedResponse, Student } from '../types';
-import { INITIAL_STUDENTS } from '../data';
-import { generateId } from '../utils';
 
 function extractYear(y: string | number | undefined | null): number | null {
   if (!y) return null;
@@ -73,201 +70,107 @@ function toBackend(item: any): any {
   };
 }
 
-class StudentService extends BaseService<Student> {
-  constructor() {
-    super('students', INITIAL_STUDENTS as Student[]);
-  }
-
-  protected async getAllLocally() {
-    return this.getAllFromStorage().filter((s: any) => !s.isDeleted);
-  }
-
+class StudentService {
   async getAll(): Promise<ApiResponse<Student[]>> {
-    try {
-      const res = await api.get<any[]>(`/students`);
-      if (res.success && res.data) {
-        const data = Array.isArray(res.data) ? res.data : (res.data as any)?.data ?? [];
-        if (data.length > 0 && ('user' in data[0] || 'fullName' in data[0])) {
-          return { success: true, data: data.map(d => toStudent(d)) };
-        }
-        return { success: true, data: data as Student[] };
-      }
-    } catch {}
-    return mockApiCall(this.getAllFromStorage());
+    const res = await api.get<any>(`/students`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to fetch students' };
+    const data = res.data?.data ?? res.data ?? [];
+    return { success: true, data: (Array.isArray(data) ? data : []).map((d: any) => toStudent(d)) };
   }
 
   async getById(id: string): Promise<ApiResponse<Student>> {
-    try {
-      const res = await api.get<any>(`/students/${id}`);
-      if (res.success && res.data && ('user' in res.data || 'fullName' in res.data)) {
-        return { success: true, data: toStudent(res.data) };
-      }
-      if (res.success && res.data) return { success: true, data: res.data as Student };
-    } catch {}
-    const item = this.getAllFromStorage().find(i => i.id === id);
-    if (!item) return { success: false, error: 'Not found' };
-    return mockApiCall(item);
+    const res = await api.get<any>(`/students/${id}`);
+    if (!res.success) return { success: false, error: res.error || 'Not found' };
+    return { success: true, data: toStudent(res.data) };
   }
 
   async getPaginated(
     page = 1, limit = 10, search?: string,
     filters?: Record<string, string>, sortBy?: string, sortOrder?: 'asc' | 'desc'
   ): Promise<ApiResponse<PaginatedResponse<Student>>> {
-    try {
-      const params: Record<string, string | number> = { page, limit };
-      if (search) params.search = search;
-      if (sortBy) { params.sortBy = sortBy; params.sortOrder = sortOrder || 'asc'; }
-      if (filters) {
-        Object.entries(filters).forEach(([k, v]) => {
-          if (v && v !== 'all') params[k] = v;
-        });
-      }
-      const sp = new URLSearchParams();
-      Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
-      const res = await api.get<any>(`/students?${sp.toString()}`);
-      if (res.success && res.data) {
-        const d = res.data as any;
-        const items = d.data || d || [];
-        const pagination = d.pagination || { total: items.length, page, limit, totalPages: Math.ceil(items.length / limit) };
-        const mapped = items.length > 0 && ('user' in items[0] || 'fullName' in items[0])
-          ? items.map((i: any) => toStudent(i))
-          : items;
-        return {
-          success: true,
-          data: { data: mapped, total: pagination.total, page: pagination.page, limit: pagination.limit, totalPages: pagination.totalPages },
-        };
-      }
-    } catch {}
-    return mockPaginatedApiCall(this.getAllFromStorage(), page, limit, search, filters, sortBy, sortOrder);
-  }
-
-  async getByHostel(hostelId: string) {
-    const data = await this.getAllLocally();
-    return { success: true, data: data.filter(s => s.hostelId === hostelId) };
-  }
-
-  async getUnallocated() {
-    const data = await this.getAllLocally();
-    return { success: true, data: data.filter(s => !s.hostelId || !s.roomId) };
-  }
-
-  async getByUserId(userId: string) {
-    try {
-      const all = await this.getAll();
-      if (all.success && all.data) {
-        const student = all.data.find(s => s.userId === userId);
-        if (student) return { success: true, data: student };
-      }
-    } catch {}
-    const data = await this.getAllLocally();
-    const student = data.find(s => s.userId === userId);
-    return { success: true, data: student };
-  }
-
-  async checkEnrollmentUnique(enrollmentNo: string, excludeId?: string) {
-    const data = await this.getAllLocally();
-    const exists = data.some(
-      s => s.enrollmentNo === enrollmentNo && s.id !== excludeId,
-    );
-    return { success: true, data: exists };
-  }
-
-  async checkEmailUnique(email: string, excludeId?: string) {
-    const data = await this.getAllLocally();
-    const exists = data.some(
-      s => s.email === email && s.id !== excludeId,
-    );
-    return { success: true, data: exists };
-  }
-
-  async createStudent(data: Omit<Student, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>) {
-    try {
-      const res = await api.post<any>(`/students`, toBackend(data));
-      if (res.success && res.data && ('user' in res.data || 'fullName' in res.data)) {
-        return { success: true, data: toStudent(res.data) };
-      }
-    } catch {}
-
-    const now = new Date().toISOString();
-    const newStudent: Student = {
-      ...data,
-      id: generateId(),
-      isDeleted: false,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const { studentEventService } = await import('./student-event.service');
-    await studentEventService.log(newStudent.id, 'Created', undefined, undefined, data.status);
-
-    const all = this.getAllFromStorage();
-    all.push(newStudent);
-    this.saveToStorage(all);
-    return { success: true, data: newStudent };
-  }
-
-  async updateStudent(id: string, data: Partial<Omit<Student, 'id' | 'isDeleted'>>) {
-    try {
-      const res = await api.patch<any>(`/students/${id}`, toBackend(data));
-      if (res.success && res.data && ('user' in res.data || 'fullName' in res.data)) {
-        return { success: true, data: toStudent(res.data) };
-      }
-    } catch {}
-
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(s => s.id === id);
-    if (idx === -1) return { success: false, error: 'Student not found' };
-
-    const oldStatus = all[idx].status;
-    all[idx] = { ...all[idx], ...data, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-
-    if (data.status && data.status !== oldStatus) {
-      const { studentEventService } = await import('./student-event.service');
-      await studentEventService.log(id, 'StatusChanged', undefined, oldStatus, data.status);
+    const params: Record<string, string | number> = { page, limit };
+    if (search) params.search = search;
+    if (sortBy) { params.sortBy = sortBy; params.sortOrder = sortOrder || 'asc'; }
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v && v !== 'all') params[k] = v;
+      });
     }
-
-    const { studentEventService } = await import('./student-event.service');
-    await studentEventService.log(id, 'Updated', undefined, undefined, undefined, 'Student details updated');
-
-    return { success: true, data: all[idx] };
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
+    const res = await api.get<any>(`/students?${sp.toString()}`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to fetch students' };
+    const d = res.data;
+    const items = d?.data ?? d ?? [];
+    const pagination = d?.pagination || { total: items.length, page, limit, totalPages: Math.ceil((items.length || 1) / limit) };
+    return {
+      success: true,
+      data: {
+        data: (Array.isArray(items) ? items : []).map((i: any) => toStudent(i)),
+        total: pagination.total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: pagination.totalPages,
+      },
+    };
   }
 
-  async softDelete(id: string) {
-    try {
-      await api.delete(`/students/${id}`);
-    } catch {}
-
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(s => s.id === id);
-    if (idx === -1) return { success: false, error: 'Student not found' };
-
-    all[idx] = { ...all[idx], isDeleted: true, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-
-    const { studentEventService } = await import('./student-event.service');
-    await studentEventService.log(id, 'StatusChanged', undefined, all[idx].status, undefined, 'Student deleted');
-
-    return { success: true, data: all[idx] };
+  async getByHostel(hostelId: string): Promise<ApiResponse<Student[]>> {
+    const all = await this.getAll();
+    if (!all.success) return all;
+    return { success: true, data: (all.data || []).filter(s => s.hostelId === hostelId) };
   }
 
-  async restore(id: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(s => s.id === id);
-    if (idx === -1) return { success: false, error: 'Student not found' };
-
-    all[idx] = { ...all[idx], isDeleted: false, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-
-    const { studentEventService } = await import('./student-event.service');
-    await studentEventService.log(id, 'StatusChanged', undefined, undefined, all[idx].status, 'Student restored');
-
-    return { success: true, data: all[idx] };
+  async getUnallocated(): Promise<ApiResponse<Student[]>> {
+    const all = await this.getAll();
+    if (!all.success) return all;
+    return { success: true, data: (all.data || []).filter(s => !s.hostelId || !s.roomId) };
   }
 
-  async getHistory(studentId: string) {
-    const { studentEventService } = await import('./student-event.service');
-    return studentEventService.getByStudent(studentId);
+  async getByUserId(userId: string): Promise<ApiResponse<Student | undefined>> {
+    const res = await this.getAll();
+    if (!res.success) return { success: false, error: res.error };
+    return { success: true, data: (res.data || []).find(s => s.userId === userId) };
+  }
+
+  async checkEnrollmentUnique(enrollmentNo: string, _excludeId?: string): Promise<ApiResponse<boolean>> {
+    const res = await this.getAll();
+    if (!res.success) return { success: true, data: false };
+    return { success: true, data: (res.data || []).some(s => s.enrollmentNo === enrollmentNo && s.id !== _excludeId) };
+  }
+
+  async checkEmailUnique(email: string, _excludeId?: string): Promise<ApiResponse<boolean>> {
+    const res = await this.getAll();
+    if (!res.success) return { success: true, data: false };
+    return { success: true, data: (res.data || []).some(s => s.email === email && s.id !== _excludeId) };
+  }
+
+  async createStudent(data: Omit<Student, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Student>> {
+    const res = await api.post<any>(`/students`, toBackend(data));
+    if (!res.success) return { success: false, error: res.error || 'Failed to create student' };
+    return { success: true, data: toStudent(res.data) };
+  }
+
+  async updateStudent(id: string, data: Partial<Omit<Student, 'id' | 'isDeleted'>>): Promise<ApiResponse<Student>> {
+    const res = await api.patch<any>(`/students/${id}`, toBackend(data));
+    if (!res.success) return { success: false, error: res.error || 'Failed to update student' };
+    return { success: true, data: toStudent(res.data) };
+  }
+
+  async softDelete(id: string): Promise<ApiResponse<Student>> {
+    const res = await api.delete<any>(`/students/${id}`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to delete student' };
+    return { success: true, data: res.data };
+  }
+
+  async restore(id: string): Promise<ApiResponse<Student>> {
+    const res = await api.patch<any>(`/students/${id}`, { isDeleted: false });
+    if (!res.success) return { success: false, error: res.error || 'Failed to restore student' };
+    return { success: true, data: toStudent(res.data) };
+  }
+
+  async getHistory(_studentId: string): Promise<ApiResponse<any[]>> {
+    return { success: true, data: [] };
   }
 }
 
