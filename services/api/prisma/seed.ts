@@ -3,14 +3,19 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const ROLES = ['SUPER_ADMIN', 'ADMIN', 'WARDEN', 'STUDENT', 'GUARDIAN'];
+const ROLES = ['SUPER_ADMIN', 'ADMIN', 'WARDEN', 'STUDENT', 'GUARDIAN', 'STAFF'];
 
 const DEMO_USERS = [
   { fullName: 'Admin User', email: 'admin@hostelflow.com', password: 'admin123', role: 'ADMIN' },
   { fullName: 'Warden User', email: 'warden@hostelflow.com', password: 'warden123', role: 'WARDEN' },
-  { fullName: 'Staff User', email: 'staff@hostelflow.com', password: 'staff123', role: 'ADMIN' },
+  { fullName: 'Ravi Kumar', email: 'ravi@hostelflow.com', password: 'staff123', role: 'STAFF' },
+  { fullName: 'Suresh Patel', email: 'suresh@hostelflow.com', password: 'staff123', role: 'STAFF' },
+  { fullName: 'Amit Singh', email: 'amit@hostelflow.com', password: 'staff123', role: 'STAFF' },
+  { fullName: 'Priya Sharma', email: 'priya@hostelflow.com', password: 'staff123', role: 'STAFF' },
+  { fullName: 'Vikram Reddy', email: 'vikram@hostelflow.com', password: 'staff123', role: 'STAFF' },
   { fullName: 'Student User', email: 'student@hostelflow.com', password: 'student123', role: 'STUDENT' },
 ];
+
 
 async function main() {
   const password = await bcrypt.hash('password123', 12);

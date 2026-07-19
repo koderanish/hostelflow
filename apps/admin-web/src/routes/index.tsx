@@ -191,6 +191,7 @@ export const router = createBrowserRouter([
             { path: 'admin/notifications/create', element: <CreateNotificationPage /> },
             { path: 'admin/notifications/templates', element: <NotificationTemplatesPage /> },
             { path: 'admin/notifications/:id', element: <NotificationDetailsPage /> },
+            { path: 'admin/staff', element: <StaffPage /> },
             { path: 'admin/reports', element: <ReportsPage /> },
             { path: 'admin/settings', element: <SettingsPage /> },
             { path: 'admin/change-password', element: <ChangePasswordPage /> },
