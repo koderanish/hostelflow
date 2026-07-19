@@ -1,7 +1,13 @@
+import crypto from 'crypto';
 import prisma from '../../config/database';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10;
+
+function generatePassword(length = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({ length }, () => chars[crypto.randomInt(chars.length)]).join('');
+}
 
 const studentSelect = {
   id: true,
@@ -84,9 +90,10 @@ export const create = async (data: any) => {
   const role = await prisma.role.findFirst({ where: { name: 'STUDENT' } });
   if (!role) throw new Error('STUDENT role not found');
 
-  const hashedPassword = data.password ? await bcrypt.hash(data.password, SALT_ROUNDS) : await bcrypt.hash('student123', SALT_ROUNDS);
+  const plainPassword = data.password || generatePassword();
+  const hashedPassword = await bcrypt.hash(plainPassword, SALT_ROUNDS);
 
-  return prisma.$transaction(async (tx) => {
+  const student = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         fullName: data.fullName || data.name,
@@ -123,6 +130,8 @@ export const create = async (data: any) => {
       select: studentSelect,
     });
   });
+
+  return { ...student, generatedPassword: plainPassword };
 };
 
 export const update = async (id: string, data: any) => {
