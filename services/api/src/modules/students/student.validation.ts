@@ -12,7 +12,17 @@ export const createSchema = z.object({
   year: z.string().optional(),
   semester: z.string().optional(),
   gender: z.string().optional(),
-  dob: z.string().optional(),
+  dob: z.string().optional().refine(
+    (val) => {
+      if (!val) return true;
+      const date = new Date(val);
+      if (isNaN(date.getTime())) return false;
+      if (date > new Date()) return false;
+      const age = Math.floor((Date.now() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      return age >= 15 && age <= 100;
+    },
+    { message: 'Date of birth must be a valid past date with age between 15 and 100 years' }
+  ),
   parentName: z.string().optional(),
   parentContact: z.string().optional(),
   emergencyContactName: z.string().optional(),
@@ -36,7 +46,17 @@ export const updateSchema = z.object({
   year: z.string().optional(),
   semester: z.string().optional(),
   gender: z.string().optional(),
-  dob: z.string().optional(),
+  dob: z.string().optional().refine(
+    (val) => {
+      if (!val) return true;
+      const date = new Date(val);
+      if (isNaN(date.getTime())) return false;
+      if (date > new Date()) return false;
+      const age = Math.floor((Date.now() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      return age >= 15 && age <= 100;
+    },
+    { message: 'Date of birth must be a valid past date with age between 15 and 100 years' }
+  ),
   parentName: z.string().optional(),
   parentContact: z.string().optional(),
   emergencyContactName: z.string().optional(),

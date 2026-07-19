@@ -40,6 +40,22 @@ export function CreateStudentPage() {
       addToast('Please fill in all required fields', 'error');
       return;
     }
+    if (dob) {
+      const dobDate = new Date(dob);
+      if (isNaN(dobDate.getTime())) {
+        addToast('Date of birth is invalid', 'error');
+        return;
+      }
+      if (dobDate > new Date()) {
+        addToast('Date of birth cannot be in the future', 'error');
+        return;
+      }
+      const age = Math.floor((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age < 15 || age > 100) {
+        addToast('Date of birth must correspond to an age between 15 and 100 years', 'error');
+        return;
+      }
+    }
     setSubmitting(true);
     const res = await api.post<any>('/students', {
       name, email, phone, gender,
