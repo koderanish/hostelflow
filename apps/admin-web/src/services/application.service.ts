@@ -1,202 +1,128 @@
-import { BaseService } from './base.service';
-import type { HostelApplication } from '../types';
-import { INITIAL_APPLICATIONS } from '../data';
-import { generateId } from '../utils';
+import { api } from '../api/client';
+import type { ApiResponse, HostelApplication } from '../types';
 
-const STATUS_TRANSITIONS: Record<string, string[]> = {
-  Pending: ['Approved', 'Rejected', 'Waitlisted', 'Cancelled'],
-  Waitlisted: ['Approved', 'Rejected', 'Cancelled'],
-  Approved: ['Cancelled'],
-  Rejected: [],
-  Cancelled: [],
-};
+function toApp(d: any): HostelApplication {
+  return {
+    id: d.id,
+    studentId: d.studentId || '',
+    studentName: d.studentName || '',
+    course: d.course || '',
+    year: d.year || '',
+    preferredHostelId: d.preferredHostelId || d.hostelId || '',
+    preferredHostel: d.preferredHostel || '',
+    preferredRoomType: d.preferredRoomType || '',
+    academicYear: d.academicYear || '',
+    semester: d.semester || '',
+    reason: d.reason || '',
+    specialRequirements: d.specialRequirements || '',
+    medicalRequirements: d.medicalRequirements || '',
+    status: d.status || 'Pending',
+    appliedDate: d.appliedDate || '',
+    reviewedBy: d.reviewedBy || undefined,
+    reviewedDate: d.reviewedDate || undefined,
+    reviewRemarks: d.reviewRemarks || undefined,
+    isDeleted: d.isDeleted || false,
+    createdAt: d.createdAt || '',
+    updatedAt: d.updatedAt || '',
+  };
+}
 
-class ApplicationService extends BaseService<HostelApplication> {
-  constructor() {
-    super('applications', INITIAL_APPLICATIONS as HostelApplication[]);
+function extractList(res: any): HostelApplication[] {
+  if (!res.success) return [];
+  const raw = res.data?.data ?? (Array.isArray(res.data) ? res.data : []);
+  return Array.isArray(raw) ? raw.map(toApp) : [];
+}
+
+class ApplicationService {
+  async getAll(): Promise<ApiResponse<HostelApplication[]>> {
+    const res = await api.get<any>('/applications?limit=1000');
+    return { success: true, data: extractList(res) };
   }
 
-  async getByStudent(studentId: string) {
-    const all = this.getAllFromStorage().filter(a => !a.isDeleted);
-    return { success: true, data: all.filter(a => a.studentId === studentId) };
+  async getById(id: string): Promise<ApiResponse<HostelApplication>> {
+    const res = await api.get<any>(`/applications/${id}`);
+    if (res.success) {
+      const d = res.data?.data ?? res.data;
+      return { success: true, data: toApp(d) };
+    }
+    return { success: false, error: 'Application not found' };
   }
 
-  async getByHostel(hostelId: string) {
-    const all = this.getAllFromStorage().filter(a => !a.isDeleted);
-    return { success: true, data: all.filter(a => a.preferredHostelId === hostelId) };
-  }
-
-  async getByStatus(status: string) {
-    const all = this.getAllFromStorage().filter(a => !a.isDeleted);
-    return { success: true, data: all.filter(a => a.status === status) };
-  }
-
-  async getActiveByStudent(studentId: string) {
-    const all = this.getAllFromStorage().filter(a => !a.isDeleted);
-    return { success: true, data: all.filter(a => a.studentId === studentId && a.status !== 'Cancelled' && a.status !== 'Rejected') };
+  async getPaginated(page = 1, limit = 15, search?: string, filters?: Record<string, string>, sortBy?: string, sortOrder?: string): Promise<ApiResponse<{ data: HostelApplication[]; totalPages: number; total: number }>> {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set('search', search);
+    if (sortBy) params.set('sortBy', sortBy);
+    if (sortOrder) params.set('sortOrder', sortOrder);
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+    }
+    const res = await api.get<any>(`/applications?${params}`);
+    const data = extractList(res);
+    const total = res.data?.total ?? data.length;
+    return { success: true, data: { data, totalPages: Math.ceil(total / limit), total } };
   }
 
   async createApplication(data: {
-    studentId: string; studentName: string; course: string; year: string;
-    preferredHostelId: string; preferredHostel: string; preferredRoomType: string;
-    academicYear: string; semester: string;
-    reason?: string; specialRequirements?: string; medicalRequirements?: string;
-    appliedDate: string;
-  }) {
-    const { studentService } = await import('./student.service');
-    const stuRes = await studentService.getById(data.studentId);
-    if (!stuRes.success || !stuRes.data || stuRes.data.isDeleted) {
-      return { success: false, error: 'Student not found' };
-    }
-
-    const activeRes = await this.getActiveByStudent(data.studentId);
-    if (activeRes.data && activeRes.data.length > 0) {
-      return { success: false, error: 'Student already has an active application' };
-    }
-
-    const { allocationService } = await import('./allocation.service');
-    const allocRes = await allocationService.getActive();
-    if (allocRes && allocRes.length > 0) {
-      const hasAlloc = allocRes.some(a => a.studentId === data.studentId && a.status === 'Active');
-      if (hasAlloc) {
-        return { success: false, error: 'Student already has an active room allocation' };
+    studentId: string; preferredHostelId: string; preferredRoomType?: string; reason?: string;
+  }): Promise<ApiResponse<HostelApplication>> {
+    try {
+      const res = await api.post<any>('/applications', data);
+      if (res.success) {
+        const d = res.data?.data ?? res.data;
+        return { success: true, data: toApp(d) };
       }
+    } catch {}
+    return { success: false, error: 'Failed to create application' };
+  }
+
+  async approveApplication(id: string, reviewedBy: string, reviewRemarks?: string): Promise<ApiResponse<HostelApplication>> {
+    const res = await api.post<any>(`/applications/${id}/approve`, { reviewedBy, reviewRemarks });
+    if (res.success) {
+      const d = res.data?.data ?? res.data;
+      return { success: true, data: toApp(d) };
     }
-
-    const now = new Date().toISOString();
-    const newApp: HostelApplication = {
-      ...data,
-      id: generateId(),
-      status: 'Pending',
-      isDeleted: false,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const { applicationEventService } = await import('./application-event.service');
-    await applicationEventService.log(newApp.id, 'Created', undefined, undefined, 'Pending');
-
-    const all = this.getAllFromStorage();
-    all.push(newApp);
-    this.saveToStorage(all);
-    return { success: true, data: newApp };
+    return { success: false, error: res.message || 'Failed to approve' };
   }
 
-  async updateApplication(id: string, data: Partial<Omit<HostelApplication, 'id' | 'isDeleted'>>) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Application not found' };
-
-    all[idx] = { ...all[idx], ...data, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-
-    const { applicationEventService } = await import('./application-event.service');
-    await applicationEventService.log(id, 'Updated', undefined, undefined, undefined, 'Application details updated');
-
-    return { success: true, data: all[idx] };
-  }
-
-  async approveApplication(id: string, reviewedBy: string, reviewRemarks?: string) {
-    const result = await this.transitionStatus(id, 'Approved', reviewedBy, reviewRemarks);
-    if (result.success && result.data) {
-      const { notificationService } = await import('./notification.service');
-      const { studentService } = await import('./student.service');
-      const stuRes = await studentService.getById(result.data.studentId);
-      if (stuRes.success && stuRes.data?.userId) {
-        await notificationService.add({ userId: stuRes.data.userId, title: 'Application Approved', message: `Your hostel application has been approved.`, type: 'General', read: false, date: new Date().toISOString().split('T')[0] });
-      }
+  async rejectApplication(id: string, reviewedBy: string, reviewRemarks?: string): Promise<ApiResponse<HostelApplication>> {
+    const res = await api.post<any>(`/applications/${id}/reject`, { reviewedBy, reviewRemarks });
+    if (res.success) {
+      const d = res.data?.data ?? res.data;
+      return { success: true, data: toApp(d) };
     }
-    return result;
+    return { success: false, error: res.message || 'Failed to reject' };
   }
 
-  async rejectApplication(id: string, reviewedBy: string, reviewRemarks?: string) {
-    if (!reviewRemarks) {
-      return { success: false, error: 'Review remarks are required for rejection' };
+  async waitlistApplication(id: string, reviewedBy: string, reviewRemarks?: string): Promise<ApiResponse<HostelApplication>> {
+    const res = await api.post<any>(`/applications/${id}/waitlist`, { reviewedBy, reviewRemarks });
+    if (res.success) {
+      const d = res.data?.data ?? res.data;
+      return { success: true, data: toApp(d) };
     }
-    const result = await this.transitionStatus(id, 'Rejected', reviewedBy, reviewRemarks);
-    if (result.success && result.data) {
-      const { notificationService } = await import('./notification.service');
-      const { studentService } = await import('./student.service');
-      const stuRes = await studentService.getById(result.data.studentId);
-      if (stuRes.success && stuRes.data?.userId) {
-        await notificationService.add({ userId: stuRes.data.userId, title: 'Application Rejected', message: `Your hostel application has been rejected. Reason: ${reviewRemarks}`, type: 'General', read: false, date: new Date().toISOString().split('T')[0] });
-      }
+    return { success: false, error: res.message || 'Failed to waitlist' };
+  }
+
+  async cancelApplication(id: string): Promise<ApiResponse<HostelApplication>> {
+    const res = await api.post<any>(`/applications/${id}/cancel`);
+    if (res.success) {
+      const d = res.data?.data ?? res.data;
+      return { success: true, data: toApp(d) };
     }
-    return result;
+    return { success: false, error: res.message || 'Failed to cancel' };
   }
 
-  async waitlistApplication(id: string, reviewedBy: string, reviewRemarks?: string) {
-    return this.transitionStatus(id, 'Waitlisted', reviewedBy, reviewRemarks);
+  async softDelete(id: string): Promise<ApiResponse<HostelApplication>> {
+    await api.delete(`/applications/${id}`);
+    return { success: true, data: undefined as any };
   }
 
-  async cancelApplication(id: string) {
-    const result = await this.transitionStatus(id, 'Cancelled');
-    if (result.success && result.data) {
-      const { notificationService } = await import('./notification.service');
-      const { studentService } = await import('./student.service');
-      const stuRes = await studentService.getById(result.data.studentId);
-      const userId = stuRes.success && stuRes.data?.userId ? stuRes.data.userId : 'u1';
-      await notificationService.add({ userId, title: 'Application Cancelled', message: `Your hostel application has been cancelled.`, type: 'General', read: false, date: new Date().toISOString().split('T')[0] });
+  async getHistory(applicationId: string): Promise<ApiResponse<any[]>> {
+    try {
+      const res = await api.get<any>(`/applications/${applicationId}/history`);
+      return { success: true, data: res.data?.data ?? [] };
+    } catch {
+      return { success: true, data: [] };
     }
-    return result;
-  }
-
-  private async transitionStatus(id: string, newStatus: string, performedBy?: string, reviewRemarks?: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Application not found' };
-
-    const app = all[idx];
-    if (app.isDeleted) return { success: false, error: 'Application is deleted' };
-
-    const allowed = STATUS_TRANSITIONS[app.status] || [];
-    if (!allowed.includes(newStatus)) {
-      return { success: false, error: `Cannot transition from '${app.status}' to '${newStatus}'` };
-    }
-
-    const oldStatus = app.status;
-    all[idx] = {
-      ...app,
-      status: newStatus as HostelApplication['status'],
-      reviewedBy: performedBy || app.reviewedBy,
-      reviewedDate: new Date().toISOString().split('T')[0],
-      reviewRemarks: reviewRemarks !== undefined ? reviewRemarks : app.reviewRemarks,
-      updatedAt: new Date().toISOString(),
-    };
-    this.saveToStorage(all);
-
-    const { applicationEventService } = await import('./application-event.service');
-    await applicationEventService.log(
-      id, 'StatusChanged', performedBy, oldStatus, newStatus,
-      reviewRemarks ? `Status changed to ${newStatus}: ${reviewRemarks}` : `Status changed to ${newStatus}`,
-    );
-
-    return { success: true, data: all[idx] };
-  }
-
-  async softDelete(id: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Application not found' };
-
-    all[idx] = { ...all[idx], isDeleted: true, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-    return { success: true, data: all[idx] };
-  }
-
-  async restore(id: string) {
-    const all = this.getAllFromStorage();
-    const idx = all.findIndex(a => a.id === id);
-    if (idx === -1) return { success: false, error: 'Application not found' };
-
-    all[idx] = { ...all[idx], isDeleted: false, updatedAt: new Date().toISOString() };
-    this.saveToStorage(all);
-    return { success: true, data: all[idx] };
-  }
-
-  async getHistory(applicationId: string) {
-    const { applicationEventService } = await import('./application-event.service');
-    return applicationEventService.getByApplication(applicationId);
   }
 }
 

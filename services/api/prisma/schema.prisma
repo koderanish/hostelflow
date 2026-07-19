@@ -153,13 +153,18 @@ model Bed {
 }
 
 model Application {
-  id                String   @id @default(uuid()) @db.Uuid
-  studentId         String   @map("student_id") @db.Uuid
-  hostelId          String   @map("hostel_id") @db.Uuid
-  preferredRoomType String?  @map("preferred_room_type") @db.VarChar(30)
-  reason            String?  @db.Text
-  status            String   @default("PENDING") @db.VarChar(20)
-  createdAt         DateTime @default(now()) @map("created_at")
+  id                String    @id @default(uuid()) @db.Uuid
+  studentId         String    @map("student_id") @db.Uuid
+  hostelId          String    @map("hostel_id") @db.Uuid
+  preferredRoomType String?   @map("preferred_room_type") @db.VarChar(30)
+  reason            String?   @db.Text
+  status            String    @default("PENDING") @db.VarChar(20)
+  reviewedBy        String?   @map("reviewed_by") @db.VarChar(100)
+  reviewedDate      DateTime? @map("reviewed_date") @db.Date
+  reviewRemarks     String?   @map("review_remarks") @db.Text
+  isDeleted         Boolean   @default(false) @map("is_deleted")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   student     Student       @relation(fields: [studentId], references: [id])
   hostel      Hostel        @relation(fields: [hostelId], references: [id])
@@ -273,34 +278,42 @@ model Visitor {
 }
 
 model Complaint {
-  id          String   @id @default(uuid()) @db.Uuid
-  studentId   String   @map("student_id") @db.Uuid
-  category    String?  @db.VarChar(50)
-  title       String?  @db.VarChar(150)
-  description String?  @db.Text
-  priority    String?  @db.VarChar(20)
-  assignedTo  String?  @map("assigned_to") @db.Uuid
-  status      String   @default("OPEN") @db.VarChar(20)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  studentId       String    @map("student_id") @db.Uuid
+  roomId          String?   @map("room_id") @db.VarChar(50)
+  roomNo          String?   @map("room_no") @db.VarChar(20)
+  category        String?   @db.VarChar(50)
+  title           String?   @db.VarChar(150)
+  description     String?   @db.Text
+  priority        String?   @db.VarChar(20)
+  assignedTo      String?   @map("assigned_to") @db.Uuid
+  assignedToName  String?   @map("assigned_to_name") @db.VarChar(100)
+  resolvedDate    DateTime? @map("resolved_date") @db.Date
+  resolutionNotes String?   @map("resolution_notes") @db.Text
+  status          String    @default("OPEN") @db.VarChar(20)
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  student    Student            @relation(fields: [studentId], references: [id])
-  assignedToUser User?          @relation("AssignedTo", fields: [assignedTo], references: [id])
-  comments   ComplaintComment[]
+  student       Student            @relation(fields: [studentId], references: [id])
+  assignedToUser User?             @relation("AssignedTo", fields: [assignedTo], references: [id])
+  comments      ComplaintComment[]
 
   @@index([studentId])
   @@map("complaints")
 }
 
 model ComplaintComment {
-  id          String   @id @default(uuid()) @db.Uuid
-  complaintId String   @map("complaint_id") @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  comment     String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at")
+  id          String    @id @default(uuid()) @db.Uuid
+  complaintId String    @map("complaint_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  comment     String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
+  @@index([complaintId])
   @@map("complaint_comments")
 }
 
