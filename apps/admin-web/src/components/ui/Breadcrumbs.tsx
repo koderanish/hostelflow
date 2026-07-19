@@ -11,10 +11,11 @@ const LABEL_MAP: Record<string, string> = {
   notices: 'Notices', reports: 'Reports', settings: 'Settings',
   profile: 'Profile', 'change-password': 'Change Password',
   application: 'Application', room: 'Room', payments: 'Payments',
+  create: 'Create', edit: 'Edit',
 };
 
 export function Breadcrumbs() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const segments = pathname.split('/').filter(Boolean);
 
   if (segments.length === 0) return null;
@@ -25,9 +26,11 @@ export function Breadcrumbs() {
         <Home className="w-3.5 h-3.5" />
       </Link>
       {segments.map((seg, i) => {
-        const label = LABEL_MAP[seg] || seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
-        const href = '/' + segments.slice(0, i + 1).join('/');
         const isLast = i === segments.length - 1;
+        const label = isLast && state?.name
+          ? state.name
+          : LABEL_MAP[seg] || seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
+        const href = '/' + segments.slice(0, i + 1).join('/');
         return (
           <span key={seg} className="flex items-center gap-1.5">
             <ChevronRight className="w-3 h-3" />

@@ -191,7 +191,7 @@ export function StudentsPage() {
                   {students.map((s, idx) => (
                     <tr key={s.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
                       <td className="py-3.5 px-5">
-                        <button onClick={() => navigate(`/admin/students/${s.id}`)}
+                        <button onClick={() => navigate(`/admin/students/${s.id}`, { state: { name: s.name } })}
                           className="flex items-center gap-3 group">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-500/20 to-accent-500/20 flex items-center justify-center text-xs font-bold text-brand-700 dark:text-brand-300">
                             {s.name.charAt(0)}
@@ -231,7 +231,7 @@ export function StudentsPage() {
                       </td>
                       <td className="py-3.5 px-5 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => navigate(`/admin/students/${s.id}`)}
+                          <button onClick={() => navigate(`/admin/students/${s.id}`, { state: { name: s.name } })}
                             className="p-2 rounded-lg text-slate-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors">
                             <Eye className="w-4 h-4" />
                           </button>
