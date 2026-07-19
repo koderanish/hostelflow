@@ -7,7 +7,7 @@ import type { Student, StudentEvent } from '../../types';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useNotify } from '../../context/NotificationContext';
-import { Loader2, Edit3, Trash2, ArrowLeft, Clock, History, User, Home, CreditCard, FileText } from 'lucide-react';
+import { Loader2, Edit3, Trash2, ArrowLeft, Clock, History, User, Home, CreditCard, FileText, KeyRound, CheckCircle, Copy, Printer, X } from 'lucide-react';
 import { formatDate, formatDateTime, calculateAge } from '../../utils';
 
 type Tab = 'overview' | 'hostel' | 'fee' | 'documents' | 'history';
@@ -41,6 +41,8 @@ export function StudentDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{ loginId: string; name: string; generatedPassword: string } | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [events, setEvents] = useState<StudentEvent[]>([]);
 
@@ -75,6 +77,54 @@ export function StudentDetailsPage() {
     }
     setDeleting(false);
     setShowDelete(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!student) return;
+    setResetting(true);
+    const res = await studentService.resetPassword(student.id);
+    if (res.success && res.data) {
+      setResetResult(res.data);
+      addToast('Password reset successfully', 'success');
+    } else {
+      addToast(res.error || 'Failed to reset password', 'error');
+    }
+    setResetting(false);
+  };
+
+  const handleCopyResetPassword = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    addToast(`${label} copied`, 'success');
+  };
+
+  const handlePrintReset = () => {
+    const w = window.open('', '_blank');
+    if (!w || !resetResult) return;
+    w.document.write(`
+      <html><head><title>New Login Credentials - ${resetResult.name}</title>
+      <style>
+        body { font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f1f5f9; }
+        .card { background: white; border-radius: 16px; padding: 40px; max-width: 420px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+        h1 { font-size: 20px; margin: 0 0 4px; color: #0f172a; }
+        .sub { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+        .field { margin-bottom: 16px; }
+        .label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .value { font-size: 18px; font-weight: 600; color: #0f172a; margin-top: 2px; font-family: monospace; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center; }
+        .badge { display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin-bottom: 16px; }
+      </style></head><body>
+      <div class="card">
+        <div class="badge">Password Reset</div>
+        <h1>${resetResult.name}</h1>
+        <p class="sub">New login credentials</p>
+        <div class="field"><div class="label">Login ID (Email)</div><div class="value">${resetResult.loginId}</div></div>
+        <div class="field"><div class="label">New Password</div><div class="value">${resetResult.generatedPassword}</div></div>
+        <div class="footer">Student must change password after first login.</div>
+      </div>
+      </body></html>
+    `);
+    w.document.close();
+    w.print();
   };
 
   if (loading) {
@@ -138,6 +188,11 @@ export function StudentDetailsPage() {
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-colors">
               <Edit3 className="w-4 h-4" /> Edit
             </Link>
+            <button onClick={handleResetPassword} disabled={resetting}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-200 dark:border-amber-900/30 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+              {resetting ? 'Resetting...' : 'Reset Password'}
+            </button>
             <button onClick={() => setShowDelete(true)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-900/30 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
               <Trash2 className="w-4 h-4" /> Delete
@@ -319,6 +374,65 @@ export function StudentDetailsPage() {
         variant="danger"
         loading={deleting}
       />
+
+      {resetResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fade-in-up">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <KeyRound className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Password Reset</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">New login credentials</p>
+                </div>
+              </div>
+              <button onClick={() => setResetResult(null)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Student</label>
+                <p className="text-base font-medium text-slate-900 dark:text-white">{resetResult.name}</p>
+              </div>
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Login ID (Email)</label>
+                  <p className="text-sm font-mono text-slate-900 dark:text-white mt-0.5 break-all">{resetResult.loginId}</p>
+                </div>
+                <button onClick={() => handleCopyResetPassword(resetResult.loginId, 'Login ID')}
+                  className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0">
+                  <Copy className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">New Password</label>
+                  <p className="text-sm font-mono text-slate-900 dark:text-white mt-0.5">{resetResult.generatedPassword}</p>
+                </div>
+                <button onClick={() => handleCopyResetPassword(resetResult.generatedPassword, 'Password')}
+                  className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0">
+                  <Copy className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-8 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <button onClick={handlePrintReset}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2">
+                <Printer className="w-4 h-4" /> Print
+              </button>
+              <button onClick={() => setResetResult(null)}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-500 hover:to-accent-500 text-white text-sm font-medium transition-all duration-200">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

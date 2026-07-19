@@ -169,6 +169,12 @@ class StudentService {
     return { success: true, data: toStudent(res.data) };
   }
 
+  async resetPassword(id: string): Promise<ApiResponse<{ loginId: string; name: string; generatedPassword: string }>> {
+    const res = await api.patch<any>(`/students/${id}/reset-password`);
+    if (!res.success) return { success: false, error: res.error || 'Failed to reset password' };
+    return { success: true, data: res.data };
+  }
+
   async getHistory(_studentId: string): Promise<ApiResponse<any[]>> {
     return { success: true, data: [] };
   }

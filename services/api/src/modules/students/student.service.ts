@@ -187,3 +187,22 @@ export const remove = async (id: string) => {
   await prisma.user.update({ where: { id: student.userId }, data: { status: false } });
   return { id };
 };
+
+export const resetPassword = async (id: string) => {
+  const student = await prisma.student.findUnique({ where: { id }, select: { id: true, userId: true, user: { select: { email: true, fullName: true } } } });
+  if (!student) throw new Error('Student not found');
+
+  const plainPassword = generatePassword();
+  const hashedPassword = await bcrypt.hash(plainPassword, SALT_ROUNDS);
+
+  await prisma.user.update({
+    where: { id: student.userId },
+    data: { password: hashedPassword },
+  });
+
+  return {
+    loginId: student.user.email,
+    name: student.user.fullName,
+    generatedPassword: plainPassword,
+  };
+};
