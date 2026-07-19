@@ -41,8 +41,39 @@ app.set('etag', false);
 app.get('/favicon.ico', (_req, res) => res.status(204).end());
 app.get('/favicon.png', (_req, res) => res.status(204).end());
 
+// ---------------------------------------------------------------------------
+// CORS – belt-and-suspenders approach
+// ---------------------------------------------------------------------------
+// 1) Manual middleware guarantees CORS headers for EVERY response, including
+//    errors, regardless of whether cors() below works correctly on Vercel.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-Requested-With, Accept, Origin',
+  );
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
+// 2) cors() npm package with config-based origin (function or whitelist)
+const corsOptions: cors.CorsOptions = {
+  origin: config.cors.origins,
+  credentials: true,
+};
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+// ---------------------------------------------------------------------------
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: config.cors.origins, credentials: true }));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

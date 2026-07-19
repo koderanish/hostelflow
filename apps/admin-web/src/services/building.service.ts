@@ -15,9 +15,123 @@ interface BuildingStats {
   students: number;
 }
 
+function mapApiBuilding(b: any): Building {
+  if (!b || b.name !== undefined) return b;
+  return {
+    id: b.id,
+    hostelId: b.hostelId || '',
+    name: b.name || '',
+    code: b.code || '',
+    description: b.description || '',
+    gender: b.gender || 'Male',
+    floors: b.floors || 1,
+    capacity: b.capacity || 0,
+    occupiedRooms: b.occupiedRooms ?? 0,
+    availableRooms: b.availableRooms ?? 0,
+    status: b.status || 'Active',
+    wardenId: b.wardenId || '',
+    isDeleted: b.isDeleted || false,
+    createdAt: b.createdAt || new Date().toISOString(),
+    updatedAt: b.updatedAt || new Date().toISOString(),
+  };
+}
+
+function mapApiBuildings(data: any): Building[] {
+  if (!data) return [];
+  const arr = Array.isArray(data) ? data : (data.data || data);
+  return arr.map(mapApiBuilding);
+}
+
 class BuildingService extends BaseService<Building> {
   constructor() {
     super('buildings', INITIAL_BUILDINGS as Building[]);
+  }
+
+  async getAll(): Promise<ApiResponse<Building[]>> {
+    try {
+      const res = await (await import('../api/client')).api.get<Building[]>(`/${this.resource}`);
+      if (res.success && res.data) {
+        const data = Array.isArray(res.data) ? res.data : (res.data as any)?.data ?? [];
+        return { success: true, data: mapApiBuildings(data) };
+      }
+    } catch {}
+    return (await import('../api/client')).mockApiCall(this.getAllFromStorage());
+  }
+
+  async getById(id: string): Promise<ApiResponse<Building>> {
+    try {
+      const res = await (await import('../api/client')).api.get<Building>(`/${this.resource}/${id}`);
+      if (res.success && res.data) {
+        const d = (res.data as any)?.data || res.data;
+        return { success: true, data: mapApiBuilding(d) };
+      }
+    } catch {}
+    const item = this.getAllFromStorage().find(i => i.id === id);
+    if (!item) return { success: false, error: 'Not found' };
+    return (await import('../api/client')).mockApiCall(item);
+  }
+
+  async create(item: Omit<Building, 'id'>): Promise<ApiResponse<Building>> {
+    try {
+      const res = await (await import('../api/client')).api.post<Building>(`/${this.resource}`, item);
+      if (res.success && res.data) {
+        return { success: true, data: mapApiBuilding(res.data) };
+      }
+    } catch {}
+    const newItem = { id: generateId(), ...item } as unknown as Building;
+    const all = this.getAllFromStorage();
+    all.push(newItem);
+    this.saveToStorage(all);
+    return (await import('../api/client')).mockApiCall(newItem);
+  }
+
+  async update(id: string, updates: Partial<Building>): Promise<ApiResponse<Building>> {
+    try {
+      const res = await (await import('../api/client')).api.patch<Building>(`/${this.resource}/${id}`, updates);
+      if (res.success && res.data) {
+        return { success: true, data: mapApiBuilding(res.data) };
+      }
+    } catch {}
+    const all = this.getAllFromStorage();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx === -1) return { success: false, error: 'Not found' };
+    all[idx] = { ...all[idx], ...updates };
+    this.saveToStorage(all);
+    return (await import('../api/client')).mockApiCall(all[idx]);
+  }
+
+  async delete(id: string): Promise<ApiResponse<void>> {
+    try {
+      const res = await (await import('../api/client')).api.delete<void>(`/${this.resource}/${id}`);
+      if (res.success) return { success: true };
+    } catch {}
+    const all = this.getAllFromStorage();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx === -1) return { success: false, error: 'Not found' };
+    all.splice(idx, 1);
+    this.saveToStorage(all);
+    return (await import('../api/client')).mockApiCall(undefined as void);
+  }
+
+  async getPaginated(page = 1, limit = 10, search?: string, filters?: Record<string, string>, sortBy?: string, sortOrder?: 'asc' | 'desc'): Promise<import('../types').ApiResponse<import('../types').PaginatedResponse<Building>>> {
+    try {
+      const params: Record<string, string | number> = { page, limit };
+      if (search) params.search = search;
+      if (sortBy) { params.sortBy = sortBy; params.sortOrder = sortOrder || 'asc'; }
+      if (filters) {
+        Object.entries(filters).forEach(([k, v]) => { if (v && v !== 'all') params[k] = v; });
+      }
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
+      const res = await (await import('../api/client')).api.get<{ data: Building[]; pagination: { total: number; page: number; limit: number; totalPages: number } }>(`/${this.resource}?${sp.toString()}`);
+      if (res.success && res.data) {
+        const d = res.data as any;
+        const items = mapApiBuildings(d.data || d || []);
+        const pagination = d.pagination || { total: items.length, page, limit, totalPages: Math.ceil(items.length / limit) };
+        return { success: true, data: { data: items, total: pagination.total, page: pagination.page, limit: pagination.limit, totalPages: pagination.totalPages } };
+      }
+    } catch {}
+    return (await import('../api/client')).mockPaginatedApiCall(this.getAllFromStorage(), page, limit, search, filters, sortBy, sortOrder);
   }
 
   async getStatistics(): Promise<ApiResponse<BuildingStats>> {

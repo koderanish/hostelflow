@@ -18,9 +18,122 @@ interface HostelStats {
   currentStudents: number;
 }
 
+function mapApiHostel(h: any): Hostel {
+  if (!h || h.name) return h;
+  return {
+    ...h,
+    name: h.hostelName || h.name || '',
+    type: h.hostelType || h.type || 'Boys',
+    gender: h.gender || 'Male',
+    capacity: h.capacity || 0,
+    occupied: h.occupied || 0,
+    address: h.address || '',
+    wardenId: h.wardenId || '',
+    wardenName: h.warden?.fullName || h.wardenName || '',
+    status: h.status || 'Active',
+    floors: h.floors || 1,
+    buildings: h._count?.buildings ?? h.buildings ?? 0,
+    facilities: h.facilities || [],
+    isDeleted: h.isDeleted || false,
+  };
+}
+
+function mapApiHostels(data: any): Hostel[] {
+  if (!data) return [];
+  const arr = Array.isArray(data) ? data : (data.data || data);
+  return arr.map(mapApiHostel);
+}
+
 class HostelService extends BaseService<Hostel> {
   constructor() {
     super('hostels', INITIAL_HOSTELS as Hostel[], 'hostels');
+  }
+
+  async getAll(): Promise<ApiResponse<Hostel[]>> {
+    try {
+      const res = await (await import('../api/client')).api.get<Hostel[]>(`/${this.resource}`);
+      if (res.success && res.data) {
+        const data = Array.isArray(res.data) ? res.data : (res.data as any)?.data ?? [];
+        return { success: true, data: mapApiHostels(data) };
+      }
+    } catch {}
+    return (await import('../api/client')).mockApiCall(this.getAllFromStorage());
+  }
+
+  async getById(id: string): Promise<ApiResponse<Hostel>> {
+    try {
+      const res = await (await import('../api/client')).api.get<Hostel>(`/${this.resource}/${id}`);
+      if (res.success && res.data) {
+        const d = (res.data as any)?.data || res.data;
+        return { success: true, data: mapApiHostel(d) };
+      }
+    } catch {}
+    const item = this.getAllFromStorage().find(i => i.id === id);
+    if (!item) return { success: false, error: 'Not found' };
+    return (await import('../api/client')).mockApiCall(item);
+  }
+
+  async create(item: Omit<Hostel, 'id'>): Promise<ApiResponse<Hostel>> {
+    try {
+      const res = await (await import('../api/client')).api.post<Hostel>(`/${this.resource}`, item);
+      if (res.success && res.data) {
+        return { success: true, data: mapApiHostel(res.data) };
+      }
+    } catch {}
+    const newItem = { id: generateId(), ...item } as Hostel;
+    const all = this.getAllFromStorage();
+    all.push(newItem);
+    this.saveToStorage(all);
+    return (await import('../api/client')).mockApiCall(newItem);
+  }
+
+  async update(id: string, updates: Partial<Hostel>): Promise<ApiResponse<Hostel>> {
+    try {
+      const res = await (await import('../api/client')).api.patch<Hostel>(`/${this.resource}/${id}`, updates);
+      if (res.success && res.data) {
+        return { success: true, data: mapApiHostel(res.data) };
+      }
+    } catch {}
+    const all = this.getAllFromStorage();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx === -1) return { success: false, error: 'Not found' };
+    all[idx] = { ...all[idx], ...updates };
+    this.saveToStorage(all);
+    return (await import('../api/client')).mockApiCall(all[idx]);
+  }
+
+  async delete(id: string): Promise<ApiResponse<void>> {
+    try {
+      const res = await (await import('../api/client')).api.delete<void>(`/${this.resource}/${id}`);
+      if (res.success) return { success: true };
+    } catch {}
+    const all = this.getAllFromStorage();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx === -1) return { success: false, error: 'Not found' };
+    all.splice(idx, 1);
+    this.saveToStorage(all);
+    return (await import('../api/client')).mockApiCall(undefined as void);
+  }
+
+  async getPaginated(page = 1, limit = 10, search?: string, filters?: Record<string, string>, sortBy?: string, sortOrder?: 'asc' | 'desc'): Promise<ApiResponse<import('../types').PaginatedResponse<Hostel>>> {
+    try {
+      const params: Record<string, string | number> = { page, limit };
+      if (search) params.search = search;
+      if (sortBy) { params.sortBy = sortBy; params.sortOrder = sortOrder || 'asc'; }
+      if (filters) {
+        Object.entries(filters).forEach(([k, v]) => { if (v && v !== 'all') params[k] = v; });
+      }
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
+      const res = await (await import('../api/client')).api.get<{ data: Hostel[]; pagination: { total: number; page: number; limit: number; totalPages: number } }>(`/${this.resource}?${sp.toString()}`);
+      if (res.success && res.data) {
+        const d = res.data as any;
+        const items = mapApiHostels(d.data || d || []);
+        const pagination = d.pagination || { total: items.length, page, limit, totalPages: Math.ceil(items.length / limit) };
+        return { success: true, data: { data: items, total: pagination.total, page: pagination.page, limit: pagination.limit, totalPages: pagination.totalPages } };
+      }
+    } catch {}
+    return (await import('../api/client')).mockPaginatedApiCall(this.getAllFromStorage(), page, limit, search, filters, sortBy, sortOrder);
   }
 
   async getStatistics(): Promise<ApiResponse<HostelStats>> {

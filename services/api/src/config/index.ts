@@ -56,9 +56,9 @@ const config = {
   },
 
   cors: {
-    origins: process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(',')
-      : true,
+    origins: (origin: string | undefined, cb: (err: Error | null, allow?: string) => void) => {
+      cb(null, origin || '*');
+    },
   },
 
   logging: {

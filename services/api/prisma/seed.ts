@@ -49,6 +49,91 @@ async function main() {
     console.log(`  User '${user.email}' ready`);
   }
 
+  const warden = await prisma.user.findFirst({ where: { email: 'warden@hostelflow.com' } });
+  const wardenId = warden?.id;
+
+  const boysHostel = await prisma.hostel.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000001' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000001',
+      hostelName: 'Boys Hostel - A',
+      hostelType: 'Boys',
+      gender: 'Male',
+      capacity: 200,
+      floors: 4,
+      address: 'Main Campus, Block A',
+      wardenId,
+    },
+  });
+  console.log(`  Hostel '${boysHostel.hostelName}' ready`);
+
+  const girlsHostel = await prisma.hostel.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000002' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000002',
+      hostelName: 'Girls Hostel - B',
+      hostelType: 'Girls',
+      gender: 'Female',
+      capacity: 150,
+      floors: 3,
+      address: 'Main Campus, Block B',
+      wardenId,
+    },
+  });
+  console.log(`  Hostel '${girlsHostel.hostelName}' ready`);
+
+  const buildings = [
+    { id: '00000000-0000-0000-0000-000000000010', hostelId: boysHostel.id, name: 'A-Block', code: 'A', floors: 4, capacity: 80, gender: 'Male' },
+    { id: '00000000-0000-0000-0000-000000000011', hostelId: boysHostel.id, name: 'B-Block', code: 'B', floors: 4, capacity: 80, gender: 'Male' },
+    { id: '00000000-0000-0000-0000-000000000012', hostelId: boysHostel.id, name: 'C-Block', code: 'C', floors: 2, capacity: 40, gender: 'Male' },
+    { id: '00000000-0000-0000-0000-000000000013', hostelId: girlsHostel.id, name: 'D-Block', code: 'D', floors: 3, capacity: 75, gender: 'Female' },
+    { id: '00000000-0000-0000-0000-000000000014', hostelId: girlsHostel.id, name: 'E-Block', code: 'E', floors: 3, capacity: 75, gender: 'Female' },
+  ];
+
+  const createdBuildings = [];
+  for (const b of buildings) {
+    const building = await prisma.building.upsert({
+      where: { id: b.id },
+      update: {},
+      create: b,
+    });
+    createdBuildings.push(building);
+    console.log(`  Building '${building.name}' ready`);
+  }
+
+  let roomCounter = 0;
+  const roomTypes = ['Single', 'Double', 'Triple', 'Dormitory'];
+  for (const building of createdBuildings) {
+    const floors = building.floors || 3;
+    const roomsPerFloor = 8;
+    for (let floor = 1; floor <= floors; floor++) {
+      for (let r = 1; r <= roomsPerFloor; r++) {
+        roomCounter++;
+        const roomNum = `${building.code}${floor.toString().padStart(2, '0')}${r.toString().padStart(2, '0')}`;
+        const roomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
+        const cap = roomType === 'Single' ? 1 : roomType === 'Double' ? 2 : roomType === 'Triple' ? 3 : 4;
+        await prisma.room.upsert({
+          where: { id: `00000000-0000-0000-0000-${roomCounter.toString().padStart(12, '0')}` },
+          update: {},
+          create: {
+            id: `00000000-0000-0000-0000-${roomCounter.toString().padStart(12, '0')}`,
+            hostelId: building.hostelId,
+            buildingId: building.id,
+            roomNumber: roomNum,
+            floor,
+            roomType,
+            capacity: cap,
+            price: cap * 5000,
+            status: 'AVAILABLE',
+          },
+        });
+      }
+    }
+  }
+  console.log(`  ${roomCounter} rooms created`);
+
   console.log('\nSeed complete!');
   console.log('Demo accounts:');
   console.log('  admin@hostelflow.com / admin123  (Admin)');

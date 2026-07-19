@@ -29,6 +29,7 @@ model User {
   role              Role                 @relation(fields: [roleId], references: [id])
   student           Student?
   wardenHostels     Hostel[]             @relation("WardenHostel")
+  wardenBuildings   Building[]           @relation("BuildingWarden")
   approvedLeaves    Leave[]              @relation("ApprovedBy")
   assignedComplaints Complaint[]         @relation("AssignedTo")
   markedAttendance  Attendance[]         @relation("MarkedBy")
@@ -83,19 +84,42 @@ model Hostel {
   hostelType String? @map("hostel_type") @db.VarChar(20)
   gender     String? @db.VarChar(20)
   capacity   Int?
+  floors     Int?
   address    String? @db.Text
   wardenId   String? @map("warden_id") @db.Uuid
 
   warden       User?          @relation("WardenHostel", fields: [wardenId], references: [id])
+  buildings    Building[]
   rooms        Room[]
   applications Application[]
 
   @@map("hostels")
 }
 
+model Building {
+  id          String  @id @default(uuid()) @db.Uuid
+  hostelId    String  @map("hostel_id") @db.Uuid
+  name        String  @db.VarChar(100)
+  code        String  @db.VarChar(30)
+  description String? @db.Text
+  gender      String? @db.VarChar(20)
+  floors      Int?
+  capacity    Int?
+  status      String  @default("Active") @db.VarChar(20)
+  wardenId    String? @map("warden_id") @db.Uuid
+
+  hostel Hostel @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  rooms  Room[]
+  warden User?  @relation("BuildingWarden", fields: [wardenId], references: [id])
+
+  @@index([hostelId])
+  @@map("buildings")
+}
+
 model Room {
   id         String  @id @default(uuid()) @db.Uuid
   hostelId   String  @map("hostel_id") @db.Uuid
+  buildingId String? @map("building_id") @db.Uuid
   roomNumber String  @map("room_number") @db.VarChar(20)
   floor      Int?
   roomType   String? @map("room_type") @db.VarChar(30)
@@ -104,10 +128,12 @@ model Room {
   price      Decimal? @db.Decimal(10, 2)
   status     String  @default("AVAILABLE") @db.VarChar(20)
 
-  hostel      Hostel       @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  hostel   Hostel       @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  building Building?    @relation(fields: [buildingId], references: [id])
   allocations Allocation[]
 
   @@index([hostelId])
+  @@index([buildingId])
   @@map("rooms")
 }
 
