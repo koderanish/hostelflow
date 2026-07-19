@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '../../schemas/auth.schema';
@@ -92,15 +92,12 @@ export default function LoginPage() {
             {errors.password && <p className="mt-1 text-xs text-red-400" role="alert">{errors.password.message}</p>}
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" {...register('rememberMe')}
                 className="w-4 h-4 rounded border-slate-600 text-brand-600 focus:ring-brand-500" />
               <span className="text-xs text-slate-400">Remember me</span>
             </label>
-            <Link to="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
-              Forgot Password?
-            </Link>
           </div>
 
           <button type="submit" disabled={isSubmitting}
@@ -118,11 +115,6 @@ export default function LoginPage() {
               )}
             </div>
           </button>
-
-          <div className="text-center">
-            <span className="text-xs text-slate-400">Don't have an account? </span>
-            <Link to="/register" className="text-xs text-brand-600 hover:text-brand-700 font-medium">Register</Link>
-          </div>
 
           <div className="pt-2">
             <p className="text-[10px] text-slate-500 text-center mb-3">Demo Accounts</p>
