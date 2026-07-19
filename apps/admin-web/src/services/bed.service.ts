@@ -1,6 +1,8 @@
 import { api } from '../api/client';
 import type { ApiResponse, Bed } from '../types';
 
+let cachedBeds: Bed[] = [];
+
 function toBed(d: any): Bed {
   return {
     id: d.id,
@@ -18,6 +20,27 @@ function extractList(res: any): Bed[] {
 }
 
 class BedService {
+  async getAll(): Promise<ApiResponse<Bed[]>> {
+    try {
+      const res = await api.get<any>('/beds?limit=1000');
+      cachedBeds = extractList(res);
+      return { success: true, data: cachedBeds };
+    } catch {
+      return { success: true, data: [] };
+    }
+  }
+
+  computeRoomStats(roomId: string) {
+    const all = cachedBeds;
+    const beds = all.filter(b => b.roomId === roomId);
+    const total = beds.length;
+    const occupied = beds.filter(b => b.status === 'Occupied' || !!b.studentId).length;
+    const capacity = total;
+    const occupiedBeds = occupied;
+    const status = occupied === total ? 'Occupied' : occupied === 0 ? 'Available' : 'Partially Occupied';
+    return { total, occupied, available: total - occupied, capacity, occupiedBeds, status };
+  }
+
   /** Get ALL beds for a room (any status) */
   async getByRoom(roomId: string): Promise<ApiResponse<Bed[]>> {
     if (!roomId) return { success: true, data: [] };
