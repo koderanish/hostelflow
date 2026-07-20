@@ -225,13 +225,26 @@ class HostelService extends BaseService<Hostel> {
   }
 
   async updateHostel(id: string, data: Partial<Omit<Hostel, 'id'>>): Promise<ApiResponse<Hostel>> {
+    try {
+      const apiPayload: Record<string, any> = {};
+      if (data.name) apiPayload.hostelName = data.name;
+      if (data.type) apiPayload.hostelType = data.type;
+      if (data.gender) apiPayload.gender = data.gender;
+      if (data.capacity) apiPayload.capacity = data.capacity;
+      if (data.floors) apiPayload.floors = data.floors;
+      if (data.address) apiPayload.address = data.address;
+      const res = await (await import('../api/client')).api.patch<Hostel>(`/${this.resource}/${id}`, apiPayload);
+      if (res.success && res.data) {
+        return { success: true, data: mapApiHostel(res.data) };
+      }
+    } catch {}
     const all = this.getAllFromStorage();
     const idx = all.findIndex(h => h.id === id);
     if (idx === -1) return { success: false, error: 'Hostel not found' };
     const { occupied, ...safeData } = data as Hostel;
     all[idx] = { ...all[idx], ...safeData, updatedAt: new Date().toISOString() };
     this.saveToStorage(all);
-    return mockApiCall(all[idx]);
+    return (await import('../api/client')).mockApiCall(all[idx]);
   }
 
   async syncOccupancy(hostelId: string): Promise<ApiResponse<Hostel>> {
