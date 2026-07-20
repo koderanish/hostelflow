@@ -1,17 +1,25 @@
 import axios from "axios";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://hostelflow-xgt1.vercel.app/api/v1";
+const BASE_URL = "https://hostelflow-xgt1.vercel.app/api/v1";
+console.log("[API] Base URL:", BASE_URL);
 
 export const api = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
 });
 
+api.interceptors.request.use((config) => {
+  console.log("[API] Request:", config.method?.toUpperCase(), config.url);
+  return config;
+});
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.code === "ECONNABORTED") {
-      console.warn("Request timed out:", err.config?.url);
+      console.warn("[API] Request timed out:", err.config?.url, "base:", err.config?.baseURL);
+    } else {
+      console.warn("[API] Request error:", err.message, err.config?.url);
     }
     return Promise.reject(err);
   }
