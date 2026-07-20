@@ -17,15 +17,14 @@ const STATUS_TONE: Record<string, "warning" | "success" | "error" | "neutral"> =
   Closed: "neutral",
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  Low: colors.outline,
-  Medium: colors.onSurfaceVariant,
-  High: "#ea580c",
-  Critical: colors.error,
-};
-
 export default function ComplaintStatus() {
   const { colors } = useTheme();
+  const PRIORITY_COLORS: Record<string, string> = {
+    Low: colors.outline,
+    Medium: colors.onSurfaceVariant,
+    High: "#ea580c",
+    Critical: colors.error,
+  };
   const navigation = useNavigation<any>();
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
