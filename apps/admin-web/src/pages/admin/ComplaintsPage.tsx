@@ -7,6 +7,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { Select } from '../../components/ui/Select';
 import { useNotify } from '../../context/NotificationContext';
 import { Plus, Search, SlidersHorizontal, AlertTriangle, ChevronLeft, ChevronRight, Eye, Trash2, ArrowRight, CheckCircle } from 'lucide-react';
 
@@ -177,13 +178,16 @@ export function ComplaintsPage() {
         </select>
         <div className="flex items-center gap-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-            className="text-sm bg-transparent text-slate-900 dark:text-white border-none focus:outline-none">
-            <option value="dateAdded">Date Added</option>
-            <option value="priority">Priority</option>
-            <option value="category">Category</option>
-            <option value="status">Status</option>
-          </select>
+          <Select
+            value={sortBy}
+            onChange={setSortBy}
+            options={[
+              { value: 'dateAdded', label: 'Date Added' },
+              { value: 'priority', label: 'Priority' },
+              { value: 'category', label: 'Category' },
+              { value: 'status', label: 'Status' },
+            ]}
+          />
           <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
             className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
             {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}

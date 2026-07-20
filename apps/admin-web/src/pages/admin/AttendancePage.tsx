@@ -6,6 +6,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { Select } from '../../components/ui/Select';
 import { useNotify } from '../../context/NotificationContext';
 import { Plus, Search, SlidersHorizontal, CalendarClock, ChevronLeft, ChevronRight, Eye, Edit3, Trash2 } from 'lucide-react';
 
@@ -115,12 +116,15 @@ export function AttendancePage() {
         </select>
         <div className="flex items-center gap-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-            className="text-sm bg-transparent text-slate-900 dark:text-white border-none focus:outline-none">
-            <option value="date">Date</option>
-            <option value="studentName">Student</option>
-            <option value="status">Status</option>
-          </select>
+          <Select
+            value={sortBy}
+            onChange={setSortBy}
+            options={[
+              { value: 'date', label: 'Date' },
+              { value: 'studentName', label: 'Student' },
+              { value: 'status', label: 'Status' },
+            ]}
+          />
           <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
             className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
             {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}

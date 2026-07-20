@@ -6,6 +6,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { Select } from '../../components/ui/Select';
 import { HostelCard } from '../../components/admin/hostel/HostelCard';
 import { useNotify } from '../../context/NotificationContext';
 import { Plus, Search, SlidersHorizontal, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -109,12 +110,15 @@ export function HostelsPage() {
         </select>
         <div className="flex items-center gap-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-            className="text-sm bg-transparent text-slate-900 dark:text-white border-none focus:outline-none">
-            <option value="name">Name</option>
-            <option value="capacity">Capacity</option>
-            <option value="occupied">Occupied</option>
-          </select>
+          <Select
+            value={sortBy}
+            onChange={setSortBy}
+            options={[
+              { value: 'name', label: 'Name' },
+              { value: 'capacity', label: 'Capacity' },
+              { value: 'occupied', label: 'Occupied' },
+            ]}
+          />
           <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
             className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
             {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
