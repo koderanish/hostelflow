@@ -47,6 +47,53 @@ export const update = async (id: string, data: any) => {
   return prisma.room.update({ where: { id }, data, include });
 };
 
+export const getByStudent = async (studentId: string) => {
+  const allocation = await prisma.allocation.findFirst({
+    where: { studentId, status: 'ACTIVE' },
+    include: {
+      room: {
+        include: {
+          hostel: { select: { id: true, hostelName: true } },
+          building: { select: { id: true, name: true } },
+          beds: { select: { id: true, roomId: true, bedNumber: true, status: true } },
+          allocations: {
+            where: { status: 'ACTIVE', studentId: { not: studentId } },
+            include: { student: { include: { user: { select: { id: true, fullName: true } } } } },
+          },
+        },
+      },
+      bed: { select: { id: true, bedNumber: true } },
+    },
+  });
+  if (!allocation) throw new ApiError(404, 'No active allocation found for this student');
+
+  const room = allocation.room;
+  const roommates = room.allocations.map((a) => ({
+    id: a.student.user.id,
+    name: a.student.user.fullName,
+  }));
+
+  return {
+    id: room.id,
+    roomNo: room.roomNumber,
+    floor: room.floor,
+    roomType: room.roomType,
+    status: room.status,
+    amenities: [],
+    price: room.price ? Number(room.price) : 0,
+    hostelId: room.hostelId,
+    hostelName: room.hostel?.hostelName,
+    buildingId: room.buildingId,
+    buildingName: room.building?.name,
+    capacity: room.capacity,
+    occupied: room.occupied,
+    bedId: allocation.bed?.id,
+    bedNumber: allocation.bed?.bedNumber,
+    roommate: roommates[0] || null,
+    facilities: [],
+  };
+};
+
 export const remove = async (id: string) => {
   await getById(id);
   await prisma.room.delete({ where: { id } });

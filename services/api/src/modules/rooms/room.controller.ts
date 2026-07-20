@@ -19,6 +19,11 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
   const data = await service.update(req.params.id, req.body);
   sendSuccess(res, data, 'Updated successfully');
 });
+export const getByStudent = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getByStudent(req.params.studentId);
+  sendSuccess(res, data);
+});
+
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await service.remove(req.params.id);
   sendSuccess(res, null, 'Deleted successfully', 204);
