@@ -43,11 +43,11 @@ export default function Notifications() {
       ) : notifications.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
           <MaterialIcons name="notifications-none" size={48} color={colors.outlineVariant} />
-          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: spacing.md, fontSize: 16 }}>No notifications yet</Text>
+          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 16, fontSize: 16 }}>No notifications yet</Text>
         </View>
       ) : (
-        <ScrollView style={{ flex: 1, paddingHorizontal: spacing.gutter, paddingTop: spacing.md }} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
+        <ScrollView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <Text style={{ color: colors.onSurfaceVariant, fontSize: 14 }}>{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</Text>
           </View>
           {notifications.map((n) => (
@@ -58,14 +58,14 @@ export default function Notifications() {
                 backgroundColor: n.read ? colors.surfaceContainerLowest : colors.primaryContainer,
                 borderWidth: 1,
                 borderColor: n.read ? colors.outlineVariant : colors.primary,
-                borderRadius: radius.lg,
-                padding: spacing.md,
-                marginBottom: spacing.sm,
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 12,
                 opacity: pressed ? 0.9 : 1,
               })}
             >
               <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={{ width: 40, height: 40, borderRadius: radius.md, backgroundColor: n.read ? colors.surfaceContainerHigh : colors.primary, alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: n.read ? colors.surfaceContainerHigh : colors.primary, alignItems: "center", justifyContent: "center" }}>
                   <MaterialIcons name={n.read ? "notifications" : "notifications-active"} size={20} color={n.read ? colors.onSurfaceVariant : colors.onPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>

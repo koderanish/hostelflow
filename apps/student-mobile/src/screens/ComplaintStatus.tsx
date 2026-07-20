@@ -56,7 +56,7 @@ export default function ComplaintStatus() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <StubHeader title="Complaint Status" />
-      <ScrollView style={{ flex: 1, paddingHorizontal: spacing.gutter, paddingTop: spacing.lg }} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      <ScrollView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 24 }} contentContainerStyle={{ paddingBottom: 40 }}>
         {loading ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80 }}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -64,16 +64,16 @@ export default function ComplaintStatus() {
         ) : complaints.length === 0 ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80 }}>
             <MaterialIcons name="checklist" size={48} color={colors.outlineVariant} />
-            <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: spacing.md, fontSize: 16 }}>No complaints found</Text>
+            <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 16, fontSize: 16 }}>No complaints found</Text>
           </View>
         ) : (
           complaints.map((c) => (
-            <Card key={c.id} style={{ marginBottom: spacing.md }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm }}>
+            <Card key={c.id} style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Text style={{ color: colors.onSurface, fontWeight: "600", fontSize: 16, flex: 1 }} numberOfLines={1}>{c.title}</Text>
                 <Badge label={c.status} tone={STATUS_TONE[c.status] ?? "neutral"} />
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: spacing.xs }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
                 <MaterialIcons name="category" size={14} color={colors.onSurfaceVariant} />
                 <Text style={{ color: colors.onSurfaceVariant, fontSize: 14, marginLeft: 6, flex: 1 }}>{c.category}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -82,13 +82,13 @@ export default function ComplaintStatus() {
                 </View>
               </View>
               {c.description ? (
-                <Text style={{ color: colors.onSurfaceVariant, fontSize: 14, marginTop: spacing.xs }} numberOfLines={2}>{c.description}</Text>
+                <Text style={{ color: colors.onSurfaceVariant, fontSize: 14, marginTop: 8 }} numberOfLines={2}>{c.description}</Text>
               ) : null}
             </Card>
           ))
         )}
 
-        <View style={{ marginTop: spacing.lg }}>
+        <View style={{ marginTop: 24 }}>
           <PrimaryButton label="New Complaint" onPress={() => navigation.navigate("Complaint")} icon="add" />
         </View>
       </ScrollView>
