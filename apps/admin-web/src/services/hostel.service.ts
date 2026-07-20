@@ -106,6 +106,9 @@ class HostelService extends BaseService<Hostel> {
     try {
       const res = await (await import('../api/client')).api.delete<void>(`/${this.resource}/${id}`);
       if (res.success) return { success: true };
+      if (res.error && !res.error.toLowerCase().includes('not found')) {
+        return res;
+      }
     } catch {}
     const all = this.getAllFromStorage();
     const idx = all.findIndex(i => i.id === id);
