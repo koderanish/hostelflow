@@ -25,6 +25,7 @@ export interface ApplyLeavePayload {
   reason: string;
   studentName?: string;
   remarks?: string;
+  documentUri?: string;
 }
 
 class LeaveService {
