@@ -303,17 +303,34 @@ class RoomService extends BaseService<Room> {
   async syncOccupancy(roomId: string) {
     const { bedService } = await import('./bed.service');
     const stats = bedService.computeRoomStats(roomId);
+    const newStatus = stats.status === 'Partially Occupied' ? 'Available' : stats.status as Room['status'];
+    const { roomEventService } = await import('./room-event.service');
+
+    try {
+      const res = await (await import('../api/client')).api.patch<Room>(`/${this.resource}/${roomId}`, { status: newStatus });
+      if (res.success && res.data) {
+        const mapped = mapApiRoom(res.data);
+        const all = this.getAllFromStorage();
+        const idx = all.findIndex(r => r.id === roomId);
+        if (idx !== -1) {
+          all[idx] = mapped;
+          this.saveToStorage(all);
+        }
+        await roomEventService.log(roomId, 'StatusChanged', undefined, undefined, newStatus, 'Derived from bed status');
+        return { success: true, data: mapped };
+      }
+    } catch {}
+
     const all = this.getAllFromStorage();
     const idx = all.findIndex(r => r.id === roomId);
     if (idx === -1) return { success: false, error: 'Room not found' };
 
     const oldStatus = all[idx].status;
-    all[idx] = { ...all[idx], status: stats.status, updatedAt: new Date().toISOString() };
+    all[idx] = { ...all[idx], status: newStatus, updatedAt: new Date().toISOString() };
     this.saveToStorage(all);
 
-    if (oldStatus !== stats.status) {
-      const { roomEventService } = await import('./room-event.service');
-      await roomEventService.log(roomId, 'StatusChanged', undefined, oldStatus, stats.status, 'Derived from bed status');
+    if (oldStatus !== newStatus) {
+      await roomEventService.log(roomId, 'StatusChanged', undefined, oldStatus, newStatus, 'Derived from bed status');
     }
 
     return { success: true, data: all[idx] };

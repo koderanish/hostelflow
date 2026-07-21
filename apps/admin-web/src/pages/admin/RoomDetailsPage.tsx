@@ -75,6 +75,7 @@ export function RoomDetailsPage() {
     ]).then(([roomRes, bedRes, hostelRes, buildingRes, evtRes, bedEvtRes]) => {
       if (roomRes.success && roomRes.data && !roomRes.data.isDeleted) {
         setRoom(roomRes.data);
+        navigate(`/admin/rooms/${id}`, { replace: true, state: { name: roomRes.data.roomNo } });
         setBeds(bedRes.data || []);
         const hName = hostelRes.data?.find(h => h.id === roomRes.data!.hostelId)?.name || 'Unknown';
         const bName = buildingRes.data?.find(b => b.id === roomRes.data!.buildingId)?.name || 'Unknown';
@@ -271,7 +272,7 @@ export function RoomDetailsPage() {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Number of beds</label>
               <input type="number" min={1} max={50} value={genCount}
                 onChange={e => setGenCount(Number(e.target.value))}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" />
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500" />
             </div>
             <div className="flex items-center justify-end gap-3">
               <button onClick={() => setShowGenerate(false)}

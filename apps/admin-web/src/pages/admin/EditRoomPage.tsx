@@ -37,6 +37,7 @@ export function EditRoomPage() {
       if (roomRes.success && roomRes.data) {
         const r = roomRes.data;
         setRoom(r);
+        navigate(`/admin/rooms/${id}/edit`, { replace: true, state: { name: r.roomNo } });
         setHostelId(r.hostelId);
         setBuildingId(r.buildingId);
         setRoomNo(r.roomNo);

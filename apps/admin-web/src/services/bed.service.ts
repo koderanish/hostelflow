@@ -39,8 +39,11 @@ class BedService {
   async getAll(): Promise<ApiResponse<Bed[]>> {
     try {
       const res = await api.get<any>('/beds?limit=1000');
-      cachedBeds = extractList(res);
-      saveToLocal();
+      const beds = extractList(res);
+      if (beds.length > 0 || cachedBeds.length === 0) {
+        cachedBeds = beds;
+        saveToLocal();
+      }
       return { success: true, data: cachedBeds };
     } catch {
       return { success: true, data: cachedBeds };
@@ -64,11 +67,14 @@ class BedService {
     try {
       const res = await api.get<any>(`/beds?roomId=${roomId}`);
       const beds = extractList(res);
-      // Update local cache with API data
-      const other = cachedBeds.filter(b => b.roomId !== roomId);
-      cachedBeds = [...other, ...beds];
-      saveToLocal();
-      return { success: true, data: beds };
+      // Only overwrite local cache when API returns data or local has nothing
+      const localForRoom = cachedBeds.filter(b => b.roomId === roomId);
+      if (beds.length > 0 || localForRoom.length === 0) {
+        const other = cachedBeds.filter(b => b.roomId !== roomId);
+        cachedBeds = [...other, ...beds];
+        saveToLocal();
+      }
+      return { success: true, data: beds.length > 0 ? beds : localForRoom };
     } catch {
       return { success: true, data: cachedBeds.filter(b => b.roomId === roomId) };
     }
