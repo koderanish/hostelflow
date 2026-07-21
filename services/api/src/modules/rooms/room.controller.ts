@@ -26,5 +26,5 @@ export const getByStudent = asyncHandler(async (req: Request, res: Response) => 
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await service.remove(req.params.id);
-  sendSuccess(res, null, 'Deleted successfully', 204);
+  sendSuccess(res, null, 'Deleted successfully');
 });

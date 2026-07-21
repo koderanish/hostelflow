@@ -58,7 +58,7 @@ export function CreateRoomPage() {
       amenities: amenitiesList,
       price: Number(price),
     };
-    const res = await roomService.createWithBeds(payload, roomNo);
+    const res = await roomService.createRoom(payload, roomNo);
     if (res.success) {
       addToast('Room created successfully', 'success');
       navigate('/admin/rooms');

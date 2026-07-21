@@ -74,7 +74,7 @@ export function EditRoomPage() {
       amenities: amenitiesList,
       price: Number(price),
     };
-    const res = await roomService.update(room.id, data);
+    const res = await roomService.updateRoom(room.id, data);
     if (res.success) {
       addToast('Room updated successfully', 'success');
       navigate('/admin/rooms');

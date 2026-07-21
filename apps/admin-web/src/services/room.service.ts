@@ -125,6 +125,76 @@ class RoomService extends BaseService<Room> {
     return (await import('../api/client')).mockApiCall(undefined as void);
   }
 
+  async createRoom(data: Omit<Room, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>, roomNo: string) {
+    try {
+      const apiPayload: Record<string, any> = {};
+      if (data.hostelId) apiPayload.hostelId = data.hostelId;
+      if (data.buildingId) apiPayload.buildingId = data.buildingId;
+      apiPayload.roomNumber = roomNo;
+      if (data.floor) apiPayload.floor = data.floor;
+      if (data.roomType) apiPayload.roomType = data.roomType;
+      if (data.status) apiPayload.status = data.status;
+      if (data.price) apiPayload.price = data.price;
+      const res = await (await import('../api/client')).api.post<Room>(`/${this.resource}`, apiPayload);
+      if (res.success && res.data) {
+        const mapped = mapApiRoom(res.data);
+        const { bedService } = await import('./bed.service');
+        const bedCount = ROOM_TYPE_BED_COUNTS[data.roomType] || 1;
+        await bedService.bulkGenerate(mapped.id, bedCount, roomNo);
+        const { roomEventService } = await import('./room-event.service');
+        await roomEventService.log(mapped.id, 'Created', undefined, undefined, data.status);
+        return { success: true, data: mapped };
+      }
+    } catch {}
+    return this.createWithBeds(data, roomNo);
+  }
+
+  async updateRoom(id: string, data: Partial<Room>): Promise<import('../types').ApiResponse<Room>> {
+    try {
+      const apiPayload: Record<string, any> = {};
+      if (data.hostelId) apiPayload.hostelId = data.hostelId;
+      if (data.buildingId) apiPayload.buildingId = data.buildingId;
+      if (data.roomNo) apiPayload.roomNumber = data.roomNo;
+      if (data.floor) apiPayload.floor = data.floor;
+      if (data.roomType) apiPayload.roomType = data.roomType;
+      if (data.status) apiPayload.status = data.status;
+      if (data.price) apiPayload.price = data.price;
+      const res = await (await import('../api/client')).api.patch<Room>(`/${this.resource}/${id}`, apiPayload);
+      if (res.success && res.data) {
+        const mapped = mapApiRoom(res.data);
+        const all = this.getAllFromStorage();
+        const idx = all.findIndex(i => i.id === id);
+        if (idx !== -1) {
+          all[idx] = { ...all[idx], ...data, updatedAt: mapped.updatedAt };
+          this.saveToStorage(all);
+        }
+        return { success: true, data: mapped };
+      }
+    } catch {}
+    const all = this.getAllFromStorage();
+    const idx = all.findIndex(i => i.id === id);
+    if (idx === -1) return { success: false, error: 'Not found' };
+    all[idx] = { ...all[idx], ...data };
+    this.saveToStorage(all);
+    return (await import('../api/client')).mockApiCall(all[idx]);
+  }
+
+  async deleteRoom(id: string): Promise<import('../types').ApiResponse<void>> {
+    try {
+      const res = await (await import('../api/client')).api.delete<void>(`/${this.resource}/${id}`);
+      if (res.success) {
+        const all = this.getAllFromStorage();
+        const idx = all.findIndex(i => i.id === id);
+        if (idx !== -1) {
+          all.splice(idx, 1);
+          this.saveToStorage(all);
+        }
+        return { success: true };
+      }
+    } catch {}
+    return this.softDelete(id).then(() => ({ success: true } as any));
+  }
+
   async getPaginated(page = 1, limit = 10, search?: string, filters?: Record<string, string>, sortBy?: string, sortOrder?: 'asc' | 'desc'): Promise<import('../types').ApiResponse<import('../types').PaginatedResponse<Room>>> {
     try {
       const params: Record<string, string | number> = { page, limit };

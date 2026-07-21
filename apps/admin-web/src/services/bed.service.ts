@@ -1,5 +1,6 @@
 import { api } from '../api/client';
 import type { ApiResponse, Bed } from '../types';
+import { generateId } from '../utils';
 
 let cachedBeds: Bed[] = [];
 
@@ -19,14 +20,30 @@ function extractList(res: any): Bed[] {
   return Array.isArray(raw) ? raw.map(toBed) : [];
 }
 
+function saveToLocal(): void {
+  try {
+    localStorage.setItem('hostelflow_beds', JSON.stringify(cachedBeds));
+  } catch {}
+}
+
+function loadFromLocal(): void {
+  try {
+    const raw = localStorage.getItem('hostelflow_beds');
+    if (raw) cachedBeds = JSON.parse(raw);
+  } catch {}
+}
+
+loadFromLocal();
+
 class BedService {
   async getAll(): Promise<ApiResponse<Bed[]>> {
     try {
       const res = await api.get<any>('/beds?limit=1000');
       cachedBeds = extractList(res);
+      saveToLocal();
       return { success: true, data: cachedBeds };
     } catch {
-      return { success: true, data: [] };
+      return { success: true, data: cachedBeds };
     }
   }
 
@@ -46,9 +63,14 @@ class BedService {
     if (!roomId) return { success: true, data: [] };
     try {
       const res = await api.get<any>(`/beds?roomId=${roomId}`);
-      return { success: true, data: extractList(res) };
+      const beds = extractList(res);
+      // Update local cache with API data
+      const other = cachedBeds.filter(b => b.roomId !== roomId);
+      cachedBeds = [...other, ...beds];
+      saveToLocal();
+      return { success: true, data: beds };
     } catch {
-      return { success: true, data: [] };
+      return { success: true, data: cachedBeds.filter(b => b.roomId === roomId) };
     }
   }
 
@@ -66,19 +88,37 @@ class BedService {
       const all = extractList(res);
       return { success: true, data: all.filter(b => b.status === 'Available') };
     } catch {
-      return { success: true, data: [] };
+      return { success: true, data: cachedBeds.filter(b => b.roomId === roomId && b.status === 'Available') };
     }
   }
 
-  /** Generate beds for a room via API */
+  /** Generate beds for a room via API, fall back to local generation */
   async bulkGenerate(roomId: string, count: number, prefix?: string): Promise<ApiResponse<Bed[]>> {
     try {
       const res = await api.post<any>(`/beds/bulk`, { roomId, count, prefix });
       if (res.success) {
-        return { success: true, data: extractList(res) };
+        const beds = extractList(res);
+        const other = cachedBeds.filter(b => b.roomId !== roomId);
+        cachedBeds = [...other, ...beds];
+        saveToLocal();
+        return { success: true, data: beds };
       }
     } catch {}
-    return { success: false, error: 'Failed to generate beds' };
+    // Fallback: generate beds locally
+    const existing = cachedBeds.filter(b => b.roomId === roomId).length;
+    const newBeds: Bed[] = [];
+    for (let i = 1; i <= count; i++) {
+      const bedNumber = prefix ? `${prefix}-${existing + i}` : `B${String.fromCharCode(64 + existing + i)}`;
+      newBeds.push({
+        id: generateId(),
+        roomId,
+        bedNo: bedNumber,
+        status: 'Available',
+      });
+    }
+    cachedBeds = [...cachedBeds, ...newBeds];
+    saveToLocal();
+    return { success: true, data: cachedBeds.filter(b => b.roomId === roomId) };
   }
 
   async getById(id: string): Promise<ApiResponse<Bed>> {
@@ -88,7 +128,10 @@ class BedService {
         const d = res.data?.data ?? res.data;
         return { success: true, data: toBed(d) };
       }
-    } catch {}
+    } catch {
+      const local = cachedBeds.find(b => b.id === id);
+      if (local) return { success: true, data: local };
+    }
     return { success: false, error: 'Bed not found' };
   }
 
@@ -97,9 +140,19 @@ class BedService {
       const res = await api.patch<any>(`/beds/${bedId}`, { status: 'AVAILABLE', studentId: null });
       if (res.success) {
         const d = res.data?.data ?? res.data;
-        return { success: true, data: toBed(d) };
+        const bed = toBed(d);
+        const idx = cachedBeds.findIndex(b => b.id === bedId);
+        if (idx !== -1) cachedBeds[idx] = bed;
+        saveToLocal();
+        return { success: true, data: bed };
       }
     } catch {}
+    const idx = cachedBeds.findIndex(b => b.id === bedId);
+    if (idx !== -1) {
+      cachedBeds[idx] = { ...cachedBeds[idx], status: 'Available', studentId: undefined };
+      saveToLocal();
+      return { success: true, data: cachedBeds[idx] };
+    }
     return { success: false, error: 'Failed to vacate bed' };
   }
 
@@ -108,9 +161,19 @@ class BedService {
       const res = await api.patch<any>(`/beds/${bedId}`, { status: 'OCCUPIED', studentId });
       if (res.success) {
         const d = res.data?.data ?? res.data;
-        return { success: true, data: toBed(d) };
+        const bed = toBed(d);
+        const idx = cachedBeds.findIndex(b => b.id === bedId);
+        if (idx !== -1) cachedBeds[idx] = bed;
+        saveToLocal();
+        return { success: true, data: bed };
       }
     } catch {}
+    const idx = cachedBeds.findIndex(b => b.id === bedId);
+    if (idx !== -1) {
+      cachedBeds[idx] = { ...cachedBeds[idx], status: 'Occupied', studentId };
+      saveToLocal();
+      return { success: true, data: cachedBeds[idx] };
+    }
     return { success: false, error: 'Failed to allocate bed' };
   }
 }

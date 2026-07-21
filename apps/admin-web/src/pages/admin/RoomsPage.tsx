@@ -76,7 +76,7 @@ export function RoomsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    const res = await roomService.softDelete(deleteTarget.id);
+    const res = await roomService.deleteRoom(deleteTarget.id);
     if (res.success) {
       addToast('Room deleted successfully', 'success');
       setDeleteTarget(null);
