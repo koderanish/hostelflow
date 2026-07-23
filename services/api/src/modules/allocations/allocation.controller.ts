@@ -21,7 +21,7 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 });
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await service.remove(req.params.id);
-  sendSuccess(res, null, 'Deleted successfully', 204);
+  sendSuccess(res, null, 'Deleted successfully');
 });
 export const vacate = asyncHandler(async (req: Request, res: Response) => {
   const data = await service.vacate(req.params.id);

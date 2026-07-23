@@ -22,13 +22,13 @@ function toAllocation(d: any): RoomAllocation {
     buildingId: d.room?.buildingId || d.buildingId || '',
     applicationId: d.applicationId || '',
     dateAllocated: d.allocatedDate
-      ? (typeof d.allocatedDate === 'string' ? d.allocatedDate : new Date(d.allocatedDate).toISOString().split('T')[0])
+      ? (typeof d.allocatedDate === 'string' ? d.allocatedDate.split('T')[0] : new Date(d.allocatedDate).toISOString().split('T')[0])
       : '',
     expectedVacateDate: d.expectedVacateDate
-      ? (typeof d.expectedVacateDate === 'string' ? d.expectedVacateDate : new Date(d.expectedVacateDate).toISOString().split('T')[0])
+      ? (typeof d.expectedVacateDate === 'string' ? d.expectedVacateDate.split('T')[0] : new Date(d.expectedVacateDate).toISOString().split('T')[0])
       : '',
     dateVacated: d.checkOut
-      ? (typeof d.checkOut === 'string' ? d.checkOut : new Date(d.checkOut).toISOString().split('T')[0])
+      ? (typeof d.checkOut === 'string' ? d.checkOut.split('T')[0] : new Date(d.checkOut).toISOString().split('T')[0])
       : '',
     status: STATUS_MAP[d.status] || d.status || 'Active',
     transferHistory: d.transferHistory || [],
